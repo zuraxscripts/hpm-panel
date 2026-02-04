@@ -1360,7 +1360,8 @@ def _is_newer_version(new: str, current: str) -> bool:
 def _fetch_json(url: str):
     req = urllib.request.Request(url, headers={'User-Agent': 'HPM-Panel/1.0'})
     with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read().decode('utf-8'))
+        # Use utf-8-sig to tolerate BOM in JSON (common when files are edited on Windows)
+        return json.loads(resp.read().decode('utf-8-sig'))
 
 
 def check_for_updates(force: bool = False):
