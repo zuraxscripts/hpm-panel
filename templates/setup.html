@@ -208,6 +208,32 @@
             background: rgba(0,0,0,.30);
         }
 
+        .pin-inputs {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .pin-input {
+            text-align: center;
+            font-size: 1.1rem;
+            letter-spacing: 0.08em;
+            padding: 12px 0;
+            background: rgba(0,0,0,.25);
+            border: 1px solid rgba(255,255,255,.10);
+            border-radius: 14px;
+            color: var(--text);
+            font-family: inherit;
+            outline: none;
+            caret-color: var(--primary);
+        }
+
+        .pin-input:focus {
+            border-color: rgba(79,70,229,.45);
+            box-shadow: 0 0 0 2px rgba(79,70,229,.18);
+        }
+
         .form-hint {
             font-size: 0.6875rem;
             color: var(--muted);
@@ -434,12 +460,32 @@
 
             <form id="setupForm">
                 <div class="setup-steps">
-                    <div class="step-pill active" id="stepPill1">1. Admin</div>
-                    <div class="step-pill" id="stepPill2">2. Database</div>
-                    <div class="step-pill" id="stepPill3">3. Setup</div>
+                    <div class="step-pill active" id="stepPill1">1. PIN</div>
+                    <div class="step-pill" id="stepPill2">2. Admin</div>
+                    <div class="step-pill" id="stepPill3">3. Database</div>
+                    <div class="step-pill" id="stepPill4">4. Setup</div>
                 </div>
 
                 <div class="setup-step active" id="step1">
+                    <div class="form-group">
+                        <label class="form-label"><i class="fa-solid fa-key"></i> <span data-i18n="setup_pin">Setup PIN</span></label>
+                        <div class="pin-inputs" id="pinInputs">
+                            <input type="text" class="pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 1" autocomplete="one-time-code" autofocus>
+                            <input type="text" class="pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 2">
+                            <input type="text" class="pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 3">
+                            <input type="text" class="pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit 4">
+                        </div>
+                        <p class="form-hint" data-i18n="setup_pin_hint">Enter the 4-digit code shown in the server console.</p>
+                    </div>
+
+                    <div class="step-actions">
+                        <button type="button" class="btn-submit" id="btnStep1Next">
+                            <i class="fa-solid fa-arrow-right"></i> Continue
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setup-step" id="step2">
                     <div class="form-group">
                         <label class="form-label"><i class="fa-solid fa-user"></i> <span data-i18n="setup_username">Admin Username</span></label>
                         <input type="text" class="form-input" id="username" placeholder="admin" data-i18n-placeholder="setup_username_placeholder" required autocomplete="username">
@@ -463,13 +509,14 @@
                     </div>
 
                     <div class="step-actions">
-                        <button type="button" class="btn-submit" id="btnStep1Next">
+                        <button type="button" class="btn-secondary" id="btnStep2Back"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                        <button type="button" class="btn-submit" id="btnStep2Next">
                             <i class="fa-solid fa-arrow-right"></i> Continue
                         </button>
                     </div>
                 </div>
 
-                <div class="setup-step" id="step2">
+                <div class="setup-step" id="step3">
                     <div class="form-group">
                         <label class="form-label"><i class="fa-solid fa-database"></i> Database Host</label>
                         <input type="text" class="form-input" id="dbHost" placeholder="127.0.0.1" required autocomplete="off">
@@ -505,12 +552,12 @@
                     </div>
 
                     <div class="step-actions">
-                        <button type="button" class="btn-secondary" id="btnStep2Back"><i class="fa-solid fa-arrow-left"></i> Back</button>
-                        <button type="button" class="btn-submit" id="btnStep2Next"><i class="fa-solid fa-plug"></i> Test & Continue</button>
+                        <button type="button" class="btn-secondary" id="btnStep3Back"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                        <button type="button" class="btn-submit" id="btnStep3Next"><i class="fa-solid fa-plug"></i> Test & Continue</button>
                     </div>
                 </div>
 
-                <div class="setup-step" id="step3">
+                <div class="setup-step" id="step4">
                     <div class="form-group">
                         <div class="status-indicator" id="dbStatusSummary">
                             <span class="status-dot"></span>
@@ -576,12 +623,17 @@
         const btnStep1Next = document.getElementById('btnStep1Next');
         const btnStep2Back = document.getElementById('btnStep2Back');
         const btnStep2Next = document.getElementById('btnStep2Next');
+        const btnStep3Back = document.getElementById('btnStep3Back');
+        const btnStep3Next = document.getElementById('btnStep3Next');
         const stepPill1 = document.getElementById('stepPill1');
         const stepPill2 = document.getElementById('stepPill2');
         const stepPill3 = document.getElementById('stepPill3');
+        const stepPill4 = document.getElementById('stepPill4');
         const step1 = document.getElementById('step1');
         const step2 = document.getElementById('step2');
         const step3 = document.getElementById('step3');
+        const step4 = document.getElementById('step4');
+        const pinInputs = Array.from(document.querySelectorAll('.pin-input'));
         const dbHost = document.getElementById('dbHost');
         const dbPort = document.getElementById('dbPort');
         const dbUser = document.getElementById('dbUser');
@@ -604,6 +656,7 @@
         const summaryDbPassword = document.getElementById('summaryDbPassword');
         let pollTimer = null;
         let lastLogLength = 0;
+        let setupPin = '';
         let setupUsername = '';
         let setupPassword = '';
         let setupDb = null;
@@ -661,9 +714,11 @@
             step1.classList.toggle('active', step === 1);
             step2.classList.toggle('active', step === 2);
             step3.classList.toggle('active', step === 3);
+            step4.classList.toggle('active', step === 4);
             stepPill1.classList.toggle('active', step === 1);
             stepPill2.classList.toggle('active', step === 2);
             stepPill3.classList.toggle('active', step === 3);
+            stepPill4.classList.toggle('active', step === 4);
         }
 
         function setDbStatus(state, text) {
@@ -682,6 +737,7 @@
         function maskSecrets(text) {
             let out = String(text || '');
             const secrets = [];
+            if (setupPin) secrets.push(setupPin);
             if (setupPassword) secrets.push(setupPassword);
             if (setupDb && setupDb.password) secrets.push(setupDb.password);
             secrets.forEach(secret => {
@@ -693,6 +749,58 @@
             return out;
         }
 
+        function getPinValue() {
+            return pinInputs.map(input => (input.value || '').trim()).join('');
+        }
+
+        function setPinFromIndex(startIndex, digits) {
+            const list = String(digits || '').replace(/\D/g, '').split('');
+            if (list.length === 0) return startIndex;
+            let idx = startIndex;
+            for (let i = 0; i < list.length && idx < pinInputs.length; i += 1, idx += 1) {
+                pinInputs[idx].value = list[i];
+            }
+            return Math.min(idx, pinInputs.length - 1);
+        }
+
+        pinInputs.forEach((input, idx) => {
+            input.addEventListener('input', (e) => {
+                const digits = String(e.target.value || '').replace(/\D/g, '');
+                if (!digits) {
+                    e.target.value = '';
+                    return;
+                }
+                if (digits.length === 1) {
+                    e.target.value = digits;
+                    if (idx < pinInputs.length - 1) pinInputs[idx + 1].focus();
+                    return;
+                }
+                const nextIndex = setPinFromIndex(idx, digits);
+                pinInputs[nextIndex].focus();
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !input.value && idx > 0) {
+                    pinInputs[idx - 1].value = '';
+                    pinInputs[idx - 1].focus();
+                    e.preventDefault();
+                }
+                if (e.key === 'ArrowLeft' && idx > 0) {
+                    pinInputs[idx - 1].focus();
+                    e.preventDefault();
+                }
+                if (e.key === 'ArrowRight' && idx < pinInputs.length - 1) {
+                    pinInputs[idx + 1].focus();
+                    e.preventDefault();
+                }
+                if (e.key === 'Enter') {
+                    btnStep1Next.click();
+                }
+            });
+
+            input.addEventListener('focus', () => input.select());
+        });
+
         function updateSetupSummary() {
             if (summaryAdmin) summaryAdmin.textContent = setupUsername || '-';
             if (summaryDbHost) summaryDbHost.textContent = (setupDb && setupDb.host) || '-';
@@ -702,7 +810,45 @@
             if (summaryDbPassword) summaryDbPassword.textContent = maskValue(setupDb && setupDb.password ? setupDb.password : '');
         }
 
-        btnStep1Next.addEventListener('click', () => {
+        async function verifyPinAndContinue() {
+            const pin = getPinValue();
+            if (!/^\d{4}$/.test(pin)) {
+                showAlert(t('setup_pin_required', 'Please enter the 4-digit PIN code'), 'error');
+                return;
+            }
+            btnStep1Next.disabled = true;
+            btnStep1Next.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Verifying...`;
+            try {
+                const res = await fetch('/api/setup-pin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin })
+                });
+                let data = {};
+                try { data = await res.json(); } catch (e) {}
+                if (!res.ok || !data.success) {
+                    showAlert(data.message || t('setup_pin_invalid', 'Invalid PIN code'), 'error');
+                    return;
+                }
+                setupPin = pin;
+                setStep(2);
+                const userField = document.getElementById('username');
+                if (userField) userField.focus();
+            } catch (e) {
+                showAlert(t('error_generic', 'An error occurred. Please try again.'), 'error');
+            } finally {
+                btnStep1Next.disabled = false;
+                btnStep1Next.innerHTML = `<i class="fa-solid fa-arrow-right"></i> Continue`;
+            }
+        }
+
+        btnStep1Next.addEventListener('click', verifyPinAndContinue);
+
+        btnStep2Back.addEventListener('click', () => {
+            setStep(1);
+        });
+
+        btnStep2Next.addEventListener('click', () => {
             const username = document.getElementById('username').value.trim();
             const pwd = password.value;
             const confirm = confirmPassword.value;
@@ -713,16 +859,16 @@
 
             setupUsername = username;
             setupPassword = pwd;
+            setStep(3);
+        });
+
+        btnStep3Back.addEventListener('click', () => {
+            btnStep3Next.disabled = false;
+            btnStep3Next.innerHTML = `<i class="fa-solid fa-plug"></i> Test & Continue`;
             setStep(2);
         });
 
-        btnStep2Back.addEventListener('click', () => {
-            btnStep2Next.disabled = false;
-            btnStep2Next.innerHTML = `<i class="fa-solid fa-plug"></i> Test & Continue`;
-            setStep(1);
-        });
-
-        btnStep2Next.addEventListener('click', async () => {
+        btnStep3Next.addEventListener('click', async () => {
             const db = {
                 host: dbHost.value.trim(),
                 port: dbPort.value.trim(),
@@ -739,8 +885,8 @@
             setupDb = db;
             updateSetupSummary();
             setDbStatus('info', 'Testing connection...');
-            btnStep2Next.disabled = true;
-            btnStep2Next.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Testing...`;
+            btnStep3Next.disabled = true;
+            btnStep3Next.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Testing...`;
 
             try {
                 const res = await fetch('/api/db-test', {
@@ -752,25 +898,31 @@
                 if (!out.success) {
                     setDbStatus('bad', out.message || 'Connection failed');
                     showAlert(out.message || 'Database connection failed', 'error');
-                    btnStep2Next.disabled = false;
-                    btnStep2Next.innerHTML = `<i class="fa-solid fa-plug"></i> Test & Continue`;
+                    btnStep3Next.disabled = false;
+                    btnStep3Next.innerHTML = `<i class="fa-solid fa-plug"></i> Test & Continue`;
                     return;
                 }
             } catch (e) {
                 setDbStatus('bad', 'Connection failed');
                 showAlert('Database connection failed', 'error');
-                btnStep2Next.disabled = false;
-                btnStep2Next.innerHTML = `<i class="fa-solid fa-plug"></i> Test & Continue`;
+                btnStep3Next.disabled = false;
+                btnStep3Next.innerHTML = `<i class="fa-solid fa-plug"></i> Test & Continue`;
                 return;
             }
 
             setDbStatus('ok', 'Connected');
-            setStep(3);
+            setStep(4);
             startSetup();
         });
 
         async function startSetup() {
             if (setupStarted) return;
+            if (!/^\d{4}$/.test(setupPin || '')) {
+                showAlert(t('setup_pin_required', 'Please enter the 4-digit PIN code'), 'error');
+                setStep(1);
+                setupStarted = false;
+                return;
+            }
             setupStarted = true;
             progressLog.textContent = '';
             lastLogLength = 0;
@@ -784,7 +936,7 @@
                 const response = await fetch('/api/setup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: setupUsername, password: setupPassword, db: setupDb })
+                    body: JSON.stringify({ pin: setupPin, username: setupUsername, password: setupPassword, db: setupDb })
                 });
                 const data = await response.json();
                 if (data.success) {

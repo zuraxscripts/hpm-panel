@@ -24,8 +24,6 @@ USER_AGENT = 'HPM-Panel-Updater/1.0'
 DATA_DIR = ROOT_DIR / 'data'
 STATUS_FILE = DATA_DIR / 'update_status.json'
 LOG_FILE = DATA_DIR / 'update.log'
-PANEL_VERSION_FILE = ROOT_DIR / 'panel_version.json'
-HAPPINESS_UPDATE_FILE = ROOT_DIR / 'happiness_update.json'
 PANEL_DEFAULT_HOST = 'http://127.0.0.1:20000'
 CONNECTOR_API_URL = 'https://api.github.com/repos/zuraxscripts/hpm-connector/releases/latest'
 
@@ -53,7 +51,7 @@ _status = dict(STATUS_TEMPLATE)
 def _json_load(path: Path, default):
     try:
         if path.exists():
-            return json.loads(path.read_text(encoding='utf-8'))
+            return json.loads(path.read_text(encoding='utf-8-sig'))
     except Exception:
         pass
     return default
@@ -202,6 +200,24 @@ def _load_server_config():
         return {}
 
 
+def _save_panel_config(cfg: dict):
+    try:
+        sys.path.insert(0, str(ROOT_DIR))
+        import storage  # pylint: disable=import-error
+        storage.save_panel_config(cfg)
+    except Exception:
+        pass
+
+
+def _save_server_config(cfg: dict):
+    try:
+        sys.path.insert(0, str(ROOT_DIR))
+        import storage  # pylint: disable=import-error
+        storage.save_config(cfg)
+    except Exception:
+        pass
+
+
 def _parse_settings_xml(path: Path):
     try:
         import xml.etree.ElementTree as ET
@@ -314,18 +330,19 @@ def _ensure_connector_resource(server_dir: Path):
 def _update_panel_version(version: str):
     if not version:
         return
-    payload = {'version': str(version)}
-    _json_save(PANEL_VERSION_FILE, payload)
+    cfg = _load_panel_config()
+    cfg['panel_version'] = str(version)
+    _save_panel_config(cfg)
 
 
 def _update_happiness_info(version: str, zip_url: str):
     if not version:
         return
-    payload = {
-        'version': str(version),
-        'zip_url': str(zip_url or '')
-    }
-    _json_save(HAPPINESS_UPDATE_FILE, payload)
+    cfg = _load_server_config()
+    cfg['happiness_version'] = str(version)
+    if zip_url:
+        cfg['happiness_zip_url'] = str(zip_url)
+    _save_server_config(cfg)
 
 
 def perform_panel_update(panel_zip_url: str, panel_version: str, start_pct: int, end_pct: int):
@@ -350,7 +367,7 @@ def perform_panel_update(panel_zip_url: str, panel_version: str, start_pct: int,
         source_dir = top_dirs[0] if top_dirs else extract_dir
 
         skip_top = {'data', 'HPNMP'}
-        skip_files = {'panel_config.json', 'server_config.json', 'sftp_config.json', 'happiness_update.json', 'update_config.json'}
+        skip_files = {'panel_config.json', 'server_config.json', 'panel_version.json', 'happiness_update.json', 'update_config.json'}
         skip_any = {'.git', '__pycache__', '.venv', 'venv', 'node_modules'}
 
         _log('Copying panel files...')

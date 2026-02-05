@@ -769,20 +769,6 @@
       margin-bottom:12px;
     }
 
-    /* SFTP box */
-    .sftp-box{
-      margin:0 0 14px 0;
-      padding:14px;
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:16px;
-      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
-      animation: fadeIn .25s ease-out;
-    }
-    .sftp-box-header{
-      display:flex; align-items:center; justify-content:space-between;
-      margin-bottom:10px;
-    }
-    .sftp-title{ font-weight:700; display:flex; align-items:center; gap:10px; }
     .badgeX{
       font-size:12px;
       padding:6px 10px;
@@ -1834,17 +1820,16 @@
                     <th><span data-i18n="admin_col_user">User</span></th>
                     <th><span data-i18n="admin_col_role">Role</span></th>
                     <th><span data-i18n="admin_col_enabled">Enabled</span></th>
-                    <th><span data-i18n="admin_col_sftp_port">SFTP Port</span></th>
                     <th style="text-align:right;"><span data-i18n="admin_col_actions">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody id="usersList">
-                  <tr><td colspan="5" style="text-align:center; padding:18px; color:var(--muted);" data-i18n="loading">Loading...</td></tr>
+                  <tr><td colspan="4" style="text-align:center; padding:18px; color:var(--muted);" data-i18n="loading">Loading...</td></tr>
                 </tbody>
               </table>
             </div>
             <div class="form-hint" style="margin-top:10px;" data-i18n="admin_perm_hint">
-              Permissions decide what user can see/do (SFTP can be disabled per-user).
+              Permissions decide what user can see/do.
             </div>
           </div>
         </div>
@@ -1986,7 +1971,6 @@
             <label class="checkbox"><input type="checkbox" id="perm_send_commands" checked> <span data-i18n="admin_perm_send_commands">Send Commands</span></label>
             <label class="checkbox"><input type="checkbox" id="perm_view_files" checked> <span data-i18n="admin_perm_view_files">View Files</span></label>
             <label class="checkbox"><input type="checkbox" id="perm_edit_files"> <span data-i18n="admin_perm_edit_files">Edit Files</span></label>
-            <label class="checkbox"><input type="checkbox" id="perm_use_sftp" checked> <span data-i18n="admin_perm_use_sftp">Use SFTP</span></label>
             <label class="checkbox"><input type="checkbox" id="perm_view_logs" checked> <span data-i18n="admin_perm_view_logs">View Logs</span></label>
             <label class="checkbox"><input type="checkbox" id="perm_manage_resources"> <span data-i18n="admin_perm_manage_resources">Manage Resources</span></label>
             <label class="checkbox"><input type="checkbox" id="perm_view_settings"> <span data-i18n="admin_perm_view_settings">View Settings</span></label>
@@ -2001,21 +1985,6 @@
             </div>
             <div class="form-hint" style="color: var(--warning);">
               <i class="fa-solid fa-triangle-exclamation"></i> <span data-i18n="admin_gen_password_warn">Save it now - shown only once.</span>
-            </div>
-          </div>
-        </div>
-        <div id="generatedSftpContainer" style="display:none;">
-          <div class="form-group">
-            <label class="form-label" data-i18n="admin_gen_sftp">SFTP Details</label>
-            <div class="sftp-box" style="margin:0;">
-              <div class="sftp-box-header">
-                <div class="sftp-title"><i class="fa-solid fa-server"></i> SFTP Enabled</div>
-                <span class="badgeX success" id="generatedSftpPortBadge">Port</span>
-              </div>
-              <div id="generatedSftpBody" style="color:var(--muted); font-size:13px;"></div>
-            </div>
-            <div class="form-hint" style="color: var(--warning);">
-              <i class="fa-solid fa-triangle-exclamation"></i> <span data-i18n="admin_gen_sftp_hint">SFTP password = account password.</span>
             </div>
           </div>
         </div>
@@ -2127,7 +2096,6 @@
             <label class="checkbox"><input type="checkbox" id="edit_perm_send_commands"> <span data-i18n="admin_perm_send_commands">Send Commands</span></label>
             <label class="checkbox"><input type="checkbox" id="edit_perm_view_files"> <span data-i18n="admin_perm_view_files">View Files</span></label>
             <label class="checkbox"><input type="checkbox" id="edit_perm_edit_files"> <span data-i18n="admin_perm_edit_files">Edit Files</span></label>
-            <label class="checkbox"><input type="checkbox" id="edit_perm_use_sftp"> <span data-i18n="admin_perm_use_sftp">Use SFTP</span></label>
             <label class="checkbox"><input type="checkbox" id="edit_perm_view_logs"> <span data-i18n="admin_perm_view_logs">View Logs</span></label>
             <label class="checkbox"><input type="checkbox" id="edit_perm_manage_resources"> <span data-i18n="admin_perm_manage_resources">Manage Resources</span></label>
             <label class="checkbox"><input type="checkbox" id="edit_perm_view_settings"> <span data-i18n="admin_perm_view_settings">View Settings</span></label>
@@ -4107,30 +4075,30 @@
         return refreshWithFade('usersList', () => loadUsers({ noFade: true }));
       }
       const body = document.getElementById('usersList');
-      body.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:18px; color:var(--muted);">${t('loading','Loading...')}</td></tr>`;
+      body.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:18px; color:var(--muted);">${t('loading','Loading...')}</td></tr>`;
 
       try{
         const res = await fetch('/api/users');
         if(res.status === 401) return (window.location.href = '/login');
         if(res.status === 403){
-          body.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:18px; color:var(--muted);">${t('admin_access_required','Admin access required.')}</td></tr>`;
+          body.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:18px; color:var(--muted);">${t('admin_access_required','Admin access required.')}</td></tr>`;
           return;
         }
         if(!res.ok){
           const msg = await res.text();
-          body.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:18px; color:var(--muted);">${t('admin_load_failed','Failed to load users.')}${msg ? ' ' + escapeHtml(msg) : ''}</td></tr>`;
+          body.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:18px; color:var(--muted);">${t('admin_load_failed','Failed to load users.')}${msg ? ' ' + escapeHtml(msg) : ''}</td></tr>`;
           return;
         }
         let data = {};
         try{
           data = await res.json();
         } catch(e){
-          body.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:18px; color:var(--muted);">${t('admin_load_failed','Failed to load users.')}</td></tr>`;
+          body.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:18px; color:var(--muted);">${t('admin_load_failed','Failed to load users.')}</td></tr>`;
           return;
         }
         const users = data.users || [];
         if(users.length === 0){
-          body.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:18px; color:var(--muted);">${t('admin_no_users')}</td></tr>`;
+          body.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:18px; color:var(--muted);">${t('admin_no_users')}</td></tr>`;
           return;
         }
 
@@ -4154,7 +4122,6 @@
             </td>
             <td><span class="role-pill ${roleClass}">${escapeHtml(roleLabel)}</span></td>
             <td>${enabled ? `<span class="badgeX success">${t('admin_yes','Yes')}</span>` : `<span class="badgeX danger">${t('admin_no','No')}</span>`}</td>
-            <td>${u.sftp_port ? escapeHtml(u.sftp_port) : '-'}</td>
             <td style="text-align:right;">
               <div class="file-actions">
                 <button class="btnx sm primary" data-act="edit" data-user="${escapeHtml(u.username)}" title="${t('btn_edit','Edit')}">
@@ -4229,7 +4196,7 @@
           });
         });
       } catch(e){
-        body.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:18px; color:var(--muted);">${t('admin_load_failed','Failed to load users.')}</td></tr>`;
+        body.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:18px; color:var(--muted);">${t('admin_load_failed','Failed to load users.')}</td></tr>`;
       }
     }
 
@@ -4237,7 +4204,6 @@
     function openCreateUserModal(){
       document.getElementById('createUserModal').classList.add('active');
       document.getElementById('generatedPasswordContainer').style.display = 'none';
-      document.getElementById('generatedSftpContainer').style.display = 'none';
       document.getElementById('newUsername').value = '';
       document.getElementById('newUserRole').value = 'user';
       document.getElementById('perm_view_dashboard').checked = true;
@@ -4246,7 +4212,6 @@
       document.getElementById('perm_send_commands').checked = true;
       document.getElementById('perm_view_files').checked = true;
       document.getElementById('perm_edit_files').checked = false;
-      document.getElementById('perm_use_sftp').checked = true;
       document.getElementById('perm_view_logs').checked = true;
     }
     function closeCreateUserModal(){
@@ -4265,7 +4230,6 @@
         can_send_commands: document.getElementById('perm_send_commands').checked,
         can_view_files: document.getElementById('perm_view_files').checked,
         can_edit_files: document.getElementById('perm_edit_files').checked,
-        can_use_sftp: document.getElementById('perm_use_sftp').checked,
         can_view_logs: document.getElementById('perm_view_logs').checked,
         can_view_players: true,
         can_manage_resources: document.getElementById('perm_manage_resources').checked,
@@ -4293,19 +4257,6 @@
 
         document.getElementById('generatedPassword').value = data.password || '';
         document.getElementById('generatedPasswordContainer').style.display = 'block';
-
-        if(data.sftp && data.sftp.port){
-          document.getElementById('generatedSftpContainer').style.display = 'block';
-          document.getElementById('generatedSftpPortBadge').textContent = `${t('label_port','Port')} ${data.sftp.port}`;
-          document.getElementById('generatedSftpBody').innerHTML = `
-            <div style="display:grid; grid-template-columns: 120px 1fr; gap:6px 12px;">
-              <div style="color:var(--muted);">${t('label_username','Username')}</div><div style="font-family:ui-monospace,monospace;">${escapeHtml(data.sftp.username)}</div>
-              <div style="color:var(--muted);">${t('label_password','Password')}</div><div style="font-family:ui-monospace,monospace;">${escapeHtml(data.sftp.password)}</div>
-            </div>
-          `;
-        } else {
-          document.getElementById('generatedSftpContainer').style.display = 'none';
-        }
 
         toast('success', t('label_create_user','Create user'), t('toast_user_created').replace('{user}', data.username));
         btn.innerHTML = `<i class="fa-solid fa-check"></i> ${t('btn_done','Done')}`;
@@ -4965,7 +4916,6 @@
       document.getElementById('edit_perm_send_commands').checked = !!perms.can_send_commands;
       document.getElementById('edit_perm_view_files').checked = !!perms.can_view_files;
       document.getElementById('edit_perm_edit_files').checked = !!perms.can_edit_files;
-      document.getElementById('edit_perm_use_sftp').checked = perms.can_use_sftp !== false;
       document.getElementById('edit_perm_view_logs').checked = !!perms.can_view_logs;
       document.getElementById('edit_perm_manage_resources').checked = !!perms.can_manage_resources;
       document.getElementById('edit_perm_view_settings').checked = !!perms.can_view_settings;
@@ -4981,7 +4931,6 @@
         can_send_commands: document.getElementById('edit_perm_send_commands').checked,
         can_view_files: document.getElementById('edit_perm_view_files').checked,
         can_edit_files: document.getElementById('edit_perm_edit_files').checked,
-        can_use_sftp: document.getElementById('edit_perm_use_sftp').checked,
         can_view_logs: document.getElementById('edit_perm_view_logs').checked,
         can_view_players: true,
         can_manage_resources: document.getElementById('edit_perm_manage_resources').checked,

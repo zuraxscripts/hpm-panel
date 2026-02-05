@@ -15,7 +15,8 @@ DATA_DIR.mkdir(exist_ok=True)
 def _json_load(path: Path, default):
     try:
         if path.exists():
-            with open(path, 'r', encoding='utf-8') as f:
+            # Handle UTF-8 BOM if present (common on Windows-edited JSON).
+            with open(path, 'r', encoding='utf-8-sig') as f:
                 return json.load(f)
     except Exception:
         pass
@@ -75,7 +76,7 @@ def _db_load_users():
         with conn.cursor() as cur:
             cur.execute(
                 'SELECT username, password_hash, role, force_password_change, '
-                'created_at, last_login, sftp_port, enabled, permissions_json, '
+                'created_at, last_login, enabled, permissions_json, '
                 'display_name, avatar '
                 'FROM users'
             )
@@ -97,7 +98,6 @@ def _db_load_users():
             'force_password_change': bool(row.get('force_password_change')),
             'created_at': row.get('created_at'),
             'last_login': row.get('last_login'),
-            'sftp_port': row.get('sftp_port'),
             'enabled': bool(row.get('enabled', 1)),
             'permissions': perms,
             'display_name': row.get('display_name') or '',
@@ -127,15 +127,14 @@ def _db_save_users(users: dict):
                 cur.execute(
                     'INSERT INTO users '
                     '(username, password_hash, role, force_password_change, created_at, last_login, '
-                    'sftp_port, enabled, permissions_json, display_name, avatar) '
-                    'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
+                    'enabled, permissions_json, display_name, avatar) '
+                    'VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) '
                     'ON DUPLICATE KEY UPDATE '
                     'password_hash=VALUES(password_hash), '
                     'role=VALUES(role), '
                     'force_password_change=VALUES(force_password_change), '
                     'created_at=VALUES(created_at), '
                     'last_login=VALUES(last_login), '
-                    'sftp_port=VALUES(sftp_port), '
                     'enabled=VALUES(enabled), '
                     'permissions_json=VALUES(permissions_json), '
                     'display_name=VALUES(display_name), '
@@ -147,7 +146,6 @@ def _db_save_users(users: dict):
                         1 if u.get('force_password_change') else 0,
                         u.get('created_at'),
                         u.get('last_login'),
-                        u.get('sftp_port'),
                         1 if u.get('enabled', True) else 0,
                         perms_json,
                         u.get('display_name'),
@@ -183,7 +181,8 @@ def load_config():
         'auto_restart': False,
         'restart_delay': 5,
         'max_restarts': 10,
-        'sftp_base_port': 2222
+        'happiness_version': '0.0.0',
+        'happiness_zip_url': ''
     }
     if db_enabled():
         data = _db_get_app_config('server')
@@ -216,7 +215,8 @@ def load_panel_config():
         'panel_name': 'HappinessMP',
         'auto_start': False,
         'scheduled_restarts': [],
-        'panel_secret': 'changeme'
+        'panel_secret': 'changeme',
+        'panel_version': '0.0.0'
     }
     if db_enabled():
         data = _db_get_app_config('panel')

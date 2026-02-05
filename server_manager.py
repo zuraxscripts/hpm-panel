@@ -55,7 +55,6 @@ RATE_LIMIT_LOCK_SECONDS = 300  # 5 minutes
 
 # Paths
 DATA_DIR = Path('./data')
-USERS_FILE = DATA_DIR / 'users.json'
 CONFIG_FILE = DATA_DIR / 'config.json'
 PANEL_CONFIG_FILE = Path('./panel_config.json')
 LOCALES_DIR = Path('./locales')
@@ -111,8 +110,68 @@ setup_state = {
     'log': []
 }
 setup_lock = threading.Lock()
+SETUP_PIN_FILE = DATA_DIR / 'setup_pin.json'
+
+
+def _load_setup_pin():
+    try:
+        if SETUP_PIN_FILE.exists():
+            return json.loads(SETUP_PIN_FILE.read_text(encoding='utf-8'))
+    except Exception:
+        return None
+    return None
+
+
+def _save_setup_pin(pin: str):
+    payload = {
+        'pin': str(pin),
+        'created_at': datetime.now().isoformat()
+    }
+    SETUP_PIN_FILE.write_text(json.dumps(payload, indent=4), encoding='utf-8')
+    try:
+        os.chmod(SETUP_PIN_FILE, 0o600)
+    except Exception:
+        pass
+
+
+def _clear_setup_pin():
+    try:
+        if SETUP_PIN_FILE.exists():
+            SETUP_PIN_FILE.unlink()
+    except Exception:
+        pass
+
+
+def ensure_setup_pin():
+    """Generate a 4-digit setup PIN if setup is required and none exists."""
+    if not setup_required():
+        _clear_setup_pin()
+        return None
+    data = _load_setup_pin()
+    if data and str(data.get('pin', '')).strip():
+        return None
+    pin = f"{secrets.randbelow(10000):04d}"
+    _save_setup_pin(pin)
+    return pin
+
+
+def verify_setup_pin(pin: str) -> bool:
+    if not pin or not re.fullmatch(r'\d{4}', str(pin).strip()):
+        return False
+    data = _load_setup_pin()
+    if not data:
+        return False
+    stored = str(data.get('pin', '')).strip()
+    return secrets.compare_digest(stored, str(pin).strip())
+
+
+def _announce_setup_pin(pin: str):
+    message = f"[SETUP] Setup PIN: {pin}"
+    print(message)
+    add_console_line(message)
 
 # ==================== UPDATE CONFIG ====================
+# Legacy local files (kept for one-time migration if present).
 PANEL_VERSION_FILE = Path('./panel_version.json')
 HAPPINESS_UPDATE_FILE = Path('./happiness_update.json')
 UPDATE_CONFIG_FILE = Path('./update_config.json')
@@ -120,6 +179,7 @@ UPDATE_STATUS_FILE = DATA_DIR / 'update_status.json'
 UPDATE_JOB_FILE = DATA_DIR / 'update_job.json'
 
 DEFAULT_PANEL_REPO = 'zuraxscripts/hpm-panel'
+DEFAULT_UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/zuraxscripts/hpm-panel/main/update_config.json'
 DEFAULT_HAPPINESS_UPDATE_URL = 'https://raw.githubusercontent.com/zuraxscripts/hpm-panel/main/happiness_update.json'
 DEFAULT_UPDATE_INTERVAL_MINUTES = 30
 
@@ -185,6 +245,7 @@ def _setup_finish():
     _setup_log('Setup complete')
     add_console_line('[SETUP] Cleaning setup downloads')
     _cleanup_setup_downloads()
+    _clear_setup_pin()
 
 
 def load_bans():
@@ -232,7 +293,7 @@ def csrf_protect():
     """Check CSRF token on state-changing requests."""
     if request.method in ('POST', 'PUT', 'DELETE'):
         # Skip CSRF for login/setup (no session yet), socket.io, and panel hooks
-        if request.path in ('/api/login', '/api/setup', '/api/db-test') or request.path.startswith('/socket.io') or request.path.startswith('/api/panel-hook/'):
+        if request.path in ('/api/login', '/api/setup', '/api/setup-pin', '/api/db-test') or request.path.startswith('/socket.io') or request.path.startswith('/api/panel-hook/'):
             return
         if not validate_csrf_token():
             return jsonify({'error': 'Invalid or missing CSRF token'}), 403
@@ -397,7 +458,6 @@ def create_user(username, password, role='user', force_password_change=True, per
                 'can_send_commands': True,
                 'can_view_files': True,
                 'can_edit_files': True,
-                'can_use_sftp': True,
                 'can_view_logs': True,
                 'can_view_players': True,
                 'can_manage_resources': True,
@@ -411,16 +471,11 @@ def create_user(username, password, role='user', force_password_change=True, per
                 'can_send_commands': True,
                 'can_view_files': True,
                 'can_edit_files': False,
-                'can_use_sftp': True,
                 'can_view_logs': True,
                 'can_view_players': True,
                 'can_manage_resources': False,
                 'can_view_settings': False
             }
-
-    # Assign SFTP port (base_port + user count)
-    sftp_base_port = config.get('sftp_base_port', 2222)
-    sftp_port = sftp_base_port + len(users)
 
     users[username] = {
         'password': generate_password_hash(password),
@@ -428,7 +483,6 @@ def create_user(username, password, role='user', force_password_change=True, per
         'force_password_change': force_password_change,
         'created_at': datetime.now().isoformat(),
         'last_login': None,
-        'sftp_port': sftp_port,
         'enabled': True,
         'permissions': permissions,
         'display_name': username,
@@ -440,10 +494,6 @@ def create_user(username, password, role='user', force_password_change=True, per
     # Create user's log directory
     user_log_dir = LOGS_DIR / username
     user_log_dir.mkdir(exist_ok=True)
-
-    # Start SFTP server for this user if enabled
-    if permissions.get('can_use_sftp', True):
-        start_user_sftp_server(username, password, sftp_port)
 
     return True, "User created successfully"
 
@@ -608,188 +658,6 @@ def jail_path(requested_path):
     if not abs_path.startswith(server_dir):
         return None, 'Access denied: path outside server directory'
     return abs_path, None
-
-# ==================== SFTP ====================
-
-# SFTP server processes
-sftp_servers = {}
-
-def start_user_sftp_server(username, password, port):
-    """Start SFTP server for user"""
-    global sftp_servers
-
-    # Don't start if already running
-    if username in sftp_servers and sftp_servers[username].is_alive():
-        return True
-
-    def run_sftp():
-        """Run SFTP server in thread"""
-        import socket
-        import paramiko
-        from paramiko import ServerInterface, SFTPServerInterface, SFTPServer, SFTPAttributes, SFTP_OK, SFTP_NO_SUCH_FILE
-        from paramiko.sftp_handle import SFTPHandle
-
-        class UserSFTPServer(ServerInterface):
-            def check_auth_password(self, user, pwd):
-                if user == username and check_password_hash(get_user(username)['password'], pwd):
-                    return paramiko.AUTH_SUCCESSFUL
-                return paramiko.AUTH_FAILED
-
-            def check_channel_request(self, kind, chanid):
-                if kind == 'session':
-                    return paramiko.OPEN_SUCCEEDED
-                return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
-
-            def get_allowed_auths(self, user):
-                return 'password'
-
-        class UserSFTPHandle(SFTPHandle):
-            def stat(self):
-                try:
-                    return SFTPAttributes.from_stat(os.fstat(self.readfile.fileno()))
-                except Exception:
-                    return SFTP_NO_SUCH_FILE
-
-        class UserSFTPInterface(SFTPServerInterface):
-            def __init__(self, server, *args, **kwargs):
-                self.server_dir = os.path.abspath(config.get('server_path', './HPNMP/HappMP'))
-                self.server_dir = os.path.dirname(self.server_dir)
-                super().__init__(server, *args, **kwargs)
-
-            def _realpath(self, path):
-                if path.startswith('/'):
-                    path = path[1:]
-                real_path = os.path.join(self.server_dir, path)
-                real_path = os.path.normpath(real_path)
-                if not real_path.startswith(self.server_dir):
-                    return self.server_dir
-                return real_path
-
-            def realpath(self, path):
-                if path == '.':
-                    return '/'
-                real_path = self._realpath(path)
-                if real_path.startswith(self.server_dir):
-                    relative = real_path[len(self.server_dir):]
-                    if not relative.startswith('/'):
-                        relative = '/' + relative
-                    return relative if relative else '/'
-                return '/'
-
-            def list_folder(self, path):
-                try:
-                    real_path = self._realpath(path)
-                    out = []
-                    for fname in os.listdir(real_path):
-                        attr = SFTPAttributes.from_stat(os.stat(os.path.join(real_path, fname)))
-                        attr.filename = fname
-                        out.append(attr)
-                    return out
-                except Exception:
-                    return SFTP_NO_SUCH_FILE
-
-            def stat(self, path):
-                try:
-                    return SFTPAttributes.from_stat(os.stat(self._realpath(path)))
-                except Exception:
-                    return SFTP_NO_SUCH_FILE
-
-            def lstat(self, path):
-                try:
-                    return SFTPAttributes.from_stat(os.lstat(self._realpath(path)))
-                except Exception:
-                    return SFTP_NO_SUCH_FILE
-
-            def open(self, path, flags, attr):
-                try:
-                    real_path = self._realpath(path)
-                    mode = 'rb'
-                    if flags & os.O_WRONLY:
-                        mode = 'ab' if flags & os.O_APPEND else 'wb'
-                    elif flags & os.O_RDWR:
-                        mode = 'a+b' if flags & os.O_APPEND else 'r+b'
-
-                    f = open(real_path, mode)
-                    fobj = UserSFTPHandle(flags)
-                    fobj.filename = real_path
-                    fobj.readfile = f
-                    fobj.writefile = f
-                    return fobj
-                except Exception:
-                    return SFTP_NO_SUCH_FILE
-
-            def remove(self, path):
-                try:
-                    os.remove(self._realpath(path))
-                    return SFTP_OK
-                except Exception:
-                    return SFTP_NO_SUCH_FILE
-
-            def rename(self, oldpath, newpath):
-                try:
-                    os.rename(self._realpath(oldpath), self._realpath(newpath))
-                    return SFTP_OK
-                except Exception:
-                    return SFTP_NO_SUCH_FILE
-
-            def mkdir(self, path, attr):
-                try:
-                    os.mkdir(self._realpath(path))
-                    return SFTP_OK
-                except Exception:
-                    return SFTP_NO_SUCH_FILE
-
-            def rmdir(self, path):
-                try:
-                    os.rmdir(self._realpath(path))
-                    return SFTP_OK
-                except Exception:
-                    return SFTP_NO_SUCH_FILE
-
-        try:
-            # Generate per-user host key once (stable within process)
-            host_key = paramiko.RSAKey.generate(2048)
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind(('0.0.0.0', port))
-            sock.listen(10)
-
-            while True:
-                conn, addr = sock.accept()
-                try:
-                    transport = paramiko.Transport(conn)
-                    transport.add_server_key(host_key)
-                    transport.set_subsystem_handler('sftp', SFTPServer, UserSFTPInterface)
-                    server = UserSFTPServer()
-                    transport.start_server(server=server)
-                    channel = transport.accept(20)
-                    if channel:
-                        # Avoid busy spinning
-                        while transport.is_active():
-                            time.sleep(0.1)
-                    transport.close()
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-    # Start in daemon thread
-    thread = threading.Thread(target=run_sftp, daemon=True)
-    thread.start()
-    sftp_servers[username] = thread
-
-    return True
-
-def stop_user_sftp_server(username):
-    """Stop SFTP server for user"""
-    global sftp_servers
-
-    if username in sftp_servers:
-        # Thread will die when daemon
-        del sftp_servers[username]
-        return True
-
-    return False
 
 def save_pid(pid):
     """Save PID to file"""
@@ -1270,7 +1138,8 @@ def update_connector_config(panel_secret: str, panel_host: str = None):
 def _safe_json_load(path: Path, default):
     try:
         if path.exists():
-            with open(path, 'r', encoding='utf-8') as f:
+            # Handle UTF-8 BOM if present (common on Windows-edited JSON).
+            with open(path, 'r', encoding='utf-8-sig') as f:
                 return json.load(f)
     except Exception:
         pass
@@ -1290,9 +1159,32 @@ def _load_update_config():
         'happiness_update_url': DEFAULT_HAPPINESS_UPDATE_URL,
         'check_interval_minutes': DEFAULT_UPDATE_INTERVAL_MINUTES
     }
+    # Remote defaults (allows central JSON config without local files).
+    update_cfg_url = os.getenv('HPM_UPDATE_CONFIG_URL')
+    if update_cfg_url is None:
+        update_cfg_url = DEFAULT_UPDATE_CONFIG_URL
+    if update_cfg_url:
+        try:
+            data = _fetch_json(update_cfg_url)
+            if isinstance(data, dict):
+                defaults.update({k: v for k, v in data.items() if v is not None})
+        except Exception:
+            pass
+
+    # Optional local override (legacy)
     data = _safe_json_load(UPDATE_CONFIG_FILE, {})
     if isinstance(data, dict):
         defaults.update({k: v for k, v in data.items() if v is not None})
+
+    # Optional panel config override
+    try:
+        cfg = storage.load_panel_config()
+    except Exception:
+        cfg = {}
+    if isinstance(cfg, dict):
+        for key in ('panel_repo', 'happiness_update_url', 'check_interval_minutes'):
+            if cfg.get(key) is not None:
+                defaults[key] = cfg.get(key)
 
     # Optional env overrides
     repo_env = os.getenv('HPM_PANEL_REPO')
@@ -1312,26 +1204,77 @@ def _load_update_config():
 
 
 def _load_panel_version():
-    data = _safe_json_load(PANEL_VERSION_FILE, {})
-    version = ''
-    if isinstance(data, dict):
-        version = str(data.get('version') or '').strip()
+    global panel_config
+    version = str((panel_config or {}).get('panel_version') or '').strip()
+    if not version:
+        data = _safe_json_load(PANEL_VERSION_FILE, {})
+        if isinstance(data, dict):
+            version = str(data.get('version') or '').strip()
+            if version:
+                try:
+                    if not panel_config:
+                        panel_config = storage.load_panel_config()
+                    panel_config['panel_version'] = version
+                    storage.save_panel_config(panel_config)
+                except Exception:
+                    pass
     if not version:
         version = '0.0.0'
     return version
 
 
 def _load_happiness_local_info():
+    global config
     defaults = {
         'version': '0.0.0',
         'zip_url': SETUP_SERVER_ZIP_URL
     }
-    data = _safe_json_load(HAPPINESS_UPDATE_FILE, {})
-    if not isinstance(data, dict):
-        data = {}
-    for k, v in defaults.items():
-        data.setdefault(k, v)
-    return data
+    version = str((config or {}).get('happiness_version') or '').strip()
+    zip_url = str((config or {}).get('happiness_zip_url') or '').strip()
+
+    if not version:
+        data = _safe_json_load(HAPPINESS_UPDATE_FILE, {})
+        if isinstance(data, dict):
+            version = str(data.get('version') or '').strip()
+            if not zip_url:
+                zip_url = str(data.get('zip_url') or '').strip()
+            if version:
+                try:
+                    if not config:
+                        config = storage.load_config()
+                    config['happiness_version'] = version
+                    if zip_url:
+                        config['happiness_zip_url'] = zip_url
+                    storage.save_config(config)
+                except Exception:
+                    pass
+
+    if not version:
+        # Best-effort: infer version from the last known zip URL.
+        guess = _guess_version_from_url(zip_url or defaults['zip_url'])
+        if guess:
+            version = guess
+            try:
+                if not config:
+                    config = storage.load_config()
+                config['happiness_version'] = version
+                if zip_url:
+                    config['happiness_zip_url'] = zip_url
+                storage.save_config(config)
+            except Exception:
+                pass
+
+    return {
+        'version': version or defaults['version'],
+        'zip_url': zip_url or defaults['zip_url']
+    }
+
+
+def _guess_version_from_url(url: str) -> str:
+    if not url:
+        return ''
+    match = re.search(r'(\d+\.\d+\.\d+)', str(url))
+    return match.group(1) if match else ''
 
 
 def _normalize_version(val: str):
@@ -1360,8 +1303,9 @@ def _is_newer_version(new: str, current: str) -> bool:
 def _fetch_json(url: str):
     req = urllib.request.Request(url, headers={'User-Agent': 'HPM-Panel/1.0'})
     with urllib.request.urlopen(req, timeout=15) as resp:
-        # Use utf-8-sig to tolerate BOM in JSON (common when files are edited on Windows)
-        return json.loads(resp.read().decode('utf-8-sig'))
+        raw = resp.read()
+        text = raw.decode('utf-8-sig')
+        return json.loads(text)
 
 
 def check_for_updates(force: bool = False):
@@ -1522,6 +1466,9 @@ def setup():
     """Setup page"""
     if not setup_required():
         return redirect(url_for('index'))
+    pin = ensure_setup_pin()
+    if pin:
+        _announce_setup_pin(pin)
     return send_from_directory('.', 'templates/setup.html')
 
 @app.route('/login')
@@ -1545,13 +1492,41 @@ def change_password():
 
 # ==================== API - AUTH ====================
 
+@app.route('/api/setup-pin', methods=['POST'])
+def api_setup_pin():
+    """Verify setup PIN before allowing setup."""
+    if not setup_required():
+        return jsonify({'success': False, 'message': 'Setup already completed'}), 400
+
+    if not _load_setup_pin():
+        pin = ensure_setup_pin()
+        if pin:
+            _announce_setup_pin(pin)
+        return jsonify({'success': False, 'message': 'Setup PIN not initialized. Check server console.'}), 400
+
+    data = request.json or {}
+    pin = str(data.get('pin', '')).strip()
+    if not verify_setup_pin(pin):
+        return jsonify({'success': False, 'message': 'Invalid setup PIN'}), 403
+
+    return jsonify({'success': True})
+
 @app.route('/api/setup', methods=['POST'])
 def api_setup():
     """Initial setup - create admin user"""
     if not setup_required():
         return jsonify({'success': False, 'message': 'Setup already completed'})
 
+    if not _load_setup_pin():
+        pin = ensure_setup_pin()
+        if pin:
+            _announce_setup_pin(pin)
+        return jsonify({'success': False, 'message': 'Setup PIN not initialized. Check server console.'}), 400
+
     data = request.json or {}
+    pin = str(data.get('pin', '')).strip()
+    if not verify_setup_pin(pin):
+        return jsonify({'success': False, 'message': 'Invalid setup PIN'}), 403
     username = (data.get('username') or '').strip()
     password = (data.get('password') or '').strip()
     db_info = data.get('db') or {}
@@ -1905,39 +1880,6 @@ def api_profile_change_password():
     if success:
         log_user_action(session['username'], 'PASSWORD_CHANGE', 'Success')
     return jsonify({'success': success, 'message': message})
-
-@app.route('/api/sftp-info')
-@login_required
-def api_sftp_info():
-    """Get SFTP connection info for current user"""
-    user = get_user(session['username'])
-
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    # Check if user has SFTP permission
-    if not user.get('permissions', {}).get('can_use_sftp', True):
-        return jsonify({'error': 'SFTP access not enabled for your account'}), 403
-
-    import socket as _socket
-    hostname = _socket.gethostname()
-
-    try:
-        # Try to get public IP
-        import urllib.request
-        public_ip = urllib.request.urlopen('https://api.ipify.org').read().decode('utf8')
-    except Exception:
-        public_ip = 'YOUR_SERVER_IP'
-
-    return jsonify({
-        'enabled': True,
-        'username': session['username'],
-        'port': user.get('sftp_port', config.get('sftp_base_port', 2222)),
-        'hostname': hostname,
-        'public_ip': public_ip,
-        'server_directory': os.path.dirname(config.get('server_path', './HPNMP/HappMP')),
-        'instructions': 'Use your account password to connect'
-    })
 
 # ==================== API - PANEL CONFIG ====================
 
@@ -2509,7 +2451,6 @@ def api_list_users():
             'created_at': user_data.get('created_at'),
             'last_login': user_data.get('last_login'),
             'enabled': user_data.get('enabled', True),
-            'sftp_port': user_data.get('sftp_port'),
             'permissions': user_data.get('permissions', {})
         })
 
@@ -2539,22 +2480,11 @@ def api_create_user():
     if success:
         log_user_action(session['username'], 'CREATE_USER', f'Created user: {username}')
 
-        # Get SFTP info
-        user = get_user(username)
-        sftp_info = None
-        if user and user.get('permissions', {}).get('can_use_sftp', True):
-            sftp_info = {
-                'port': user.get('sftp_port'),
-                'username': username,
-                'password': password  # Only shown once!
-            }
-
         return jsonify({
             'success': True,
             'message': message,
             'password': password,
-            'username': username,
-            'sftp': sftp_info
+            'username': username
         })
 
     return jsonify({'success': False, 'message': message})
@@ -3221,6 +3151,9 @@ def handle_connect():
 
 if __name__ == '__main__':
     add_console_line('=== HAPPINESSMP MANAGER STARTED ===')
+    pin = ensure_setup_pin()
+    if pin:
+        _announce_setup_pin(pin)
 
     # Start background threads
     stats_thread = threading.Thread(target=update_stats, daemon=True)

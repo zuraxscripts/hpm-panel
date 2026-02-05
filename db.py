@@ -174,7 +174,6 @@ def ensure_schema():
                     force_password_change TINYINT(1) NOT NULL DEFAULT 0,
                     created_at VARCHAR(64),
                     last_login VARCHAR(64),
-                    sftp_port INT,
                     enabled TINYINT(1) NOT NULL DEFAULT 1,
                     permissions_json TEXT,
                     display_name VARCHAR(64),

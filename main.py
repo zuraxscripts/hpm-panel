@@ -77,19 +77,7 @@ def main():
     install_dependencies()
     print()
 
-    # Step 2: Start SFTP server
-    print("[INFO] Starting SFTP Server...")
-    sftp_proc = subprocess.Popen(
-        [sys.executable, "sftp_server.py"],
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-    )
-    processes.append(sftp_proc)
-
-    # Small delay so SFTP binds its port before web panel starts
-    time.sleep(2)
-
-    # Step 3: Start Web Control Panel
+    # Step 2: Start Web Control Panel
     print("[INFO] Starting Web Control Panel...")
     web_proc = subprocess.Popen(
         [sys.executable, "server_manager.py"],
@@ -103,7 +91,6 @@ def main():
     print("  Services Started!")
     print()
     print("  Web Panel:    http://0.0.0.0:8080")
-    print("  SFTP Server:  See user ports in config")
     print()
     print("  Press Ctrl+C to stop all services")
     print("=" * 55)
