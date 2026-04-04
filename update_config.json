@@ -1,5 +1,5 @@
 ﻿{
     "panel_repo": "zuraxscripts/hpm-panel",
     "happiness_update_url": "https://raw.githubusercontent.com/zuraxscripts/hpm-panel/main/happiness_update.json",
-    "check_interval_minutes": 30
+    "check_interval_minutes": 10
 }

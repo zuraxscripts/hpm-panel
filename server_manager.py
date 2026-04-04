@@ -157,14 +157,24 @@ def _clear_setup_pin():
         pass
 
 
+def get_setup_pin():
+    data = _load_setup_pin()
+    if not data:
+        return None
+    pin = str(data.get('pin', '')).strip()
+    if re.fullmatch(r'\d{4}', pin):
+        return pin
+    return None
+
+
 def ensure_setup_pin():
-    """Generate a 4-digit setup PIN if setup is required and none exists."""
+    """Ensure setup PIN exists and return it when setup is required."""
     if not setup_required():
         _clear_setup_pin()
         return None
-    data = _load_setup_pin()
-    if data and str(data.get('pin', '')).strip():
-        return None
+    existing_pin = get_setup_pin()
+    if existing_pin:
+        return existing_pin
     pin = f"{secrets.randbelow(10000):04d}"
     _save_setup_pin(pin)
     return pin
@@ -181,7 +191,7 @@ def verify_setup_pin(pin: str) -> bool:
 
 
 def _announce_setup_pin(pin: str):
-    message = f"[SETUP] Setup PIN: {pin}"
+    message = f"[SETUP] Setup not completed. PIN: {pin}"
     print(message)
     add_console_line(message)
 
@@ -1481,9 +1491,7 @@ def setup():
     """Setup page"""
     if not setup_required():
         return redirect(url_for('index'))
-    pin = ensure_setup_pin()
-    if pin:
-        _announce_setup_pin(pin)
+    ensure_setup_pin()
     return send_from_directory('.', 'templates/setup.html')
 
 @app.route('/login')
@@ -3200,15 +3208,21 @@ if __name__ == '__main__':
 
         threading.Thread(target=_auto_start, daemon=True).start()
 
+    setup_hint = (
+        f'  Setup PIN: {pin}\n'
+        if pin else
+        '  Setup: completed\n'
+    )
+
     print(
-        '\n'
-        '=======================================================\n'
-        '  HappinessMP Server Manager - Pterodactyl Style\n'
-        '\n'
-        f'  Access: http://0.0.0.0:{PANEL_PORT}\n'
-        '\n'
-        '  First time? Complete setup to create admin account\n'
-        '=======================================================\n'
+        f"""
+=======================================================
+  HappinessMP Server Manager - Pterodactyl Style
+
+  Access: http://0.0.0.0:{PANEL_PORT}
+
+{setup_hint}=======================================================
+"""
     )
 
     socketio.run(app, host='0.0.0.0', port=PANEL_PORT, debug=False, allow_unsafe_werkzeug=True)
