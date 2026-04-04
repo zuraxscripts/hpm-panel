@@ -112,6 +112,16 @@ def _panel_port_arg(value):
     return port
 
 
+def _panel_port_or_default(value):
+    try:
+        port = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_PANEL_PORT
+    if port < 1 or port > 65535:
+        return DEFAULT_PANEL_PORT
+    return port
+
+
 def get_panel_host():
     return f'http://127.0.0.1:{PANEL_PORT}'
 
@@ -358,8 +368,23 @@ def save_panel_config(cfg):
 
 panel_config = load_panel_config()
 
-                                                       
 
+def _resolve_initial_panel_port():
+    env_port = os.getenv('PANEL_PORT') or os.getenv('PORT')
+    if env_port:
+        return _panel_port_or_default(env_port)
+    return _panel_port_or_default(panel_config.get('panel_port'))
+
+
+def _persist_panel_port(port: int):
+    global panel_config
+    if panel_config.get('panel_port') == port:
+        return
+    panel_config['panel_port'] = port
+    save_panel_config(panel_config)
+
+
+                                                       
 def get_current_user():
     """Get current user data from session."""
     username = session.get('username')
@@ -722,6 +747,75 @@ def find_server_process():
 
     return None, None
 
+
+def _get_live_process(pid):
+    if not pid:
+        return None
+    try:
+        proc = psutil.Process(int(pid))
+        if not proc.is_running():
+            return None
+        try:
+            if proc.status() == psutil.STATUS_ZOMBIE:
+                return None
+        except Exception:
+            pass
+        return proc
+    except Exception:
+        return None
+
+
+def sync_server_state_with_system(emit_change=False):
+    """Synchronize in-memory server_state with the real OS process state."""
+    global server_process, server_state, resource_states, connected_players, pending_actions
+
+    prev_running = bool(server_state.get('running'))
+    pid = server_state.get('pid')
+    proc = _get_live_process(pid)
+
+    if not proc:
+        saved_pid = load_pid()
+        proc = _get_live_process(saved_pid)
+        if proc:
+            pid = proc.pid
+        else:
+            found_pid, _ = find_server_process()
+            proc = _get_live_process(found_pid)
+            if proc:
+                pid = proc.pid
+
+    if proc:
+        server_state['running'] = True
+        server_state['pid'] = proc.pid
+        if not server_state.get('start_time'):
+            try:
+                server_state['start_time'] = proc.create_time()
+            except Exception:
+                server_state['start_time'] = time.time()
+        managed_pid = server_process.pid if server_process else None
+        server_state['attached'] = managed_pid != proc.pid
+        if server_state['attached']:
+            server_process = None
+        save_pid(proc.pid)
+    else:
+        server_state['running'] = False
+        server_state['pid'] = None
+        server_state['start_time'] = None
+        server_state['attached'] = False
+        server_state['cpu_usage'] = 0
+        server_state['memory_usage'] = 0
+        resource_states = {}
+        connected_players = {}
+        pending_actions = []
+        server_process = None
+        remove_pid()
+
+    if emit_change and prev_running != bool(server_state.get('running')):
+        socketio.emit('server_status', {'running': bool(server_state.get('running'))})
+
+    return bool(server_state.get('running'))
+
+
 def start_server(username):
     """Start the server"""
     global server_process, server_state, resource_states
@@ -867,6 +961,7 @@ def update_stats():
     global server_state, resource_states, connected_players, pending_actions
 
     while True:
+        sync_server_state_with_system(emit_change=True)
         if server_state['running'] and server_state['pid']:
             try:
                 process = psutil.Process(server_state['pid'])
@@ -1431,7 +1526,7 @@ def _detect_restart_mode():
         proc = psutil.Process(os.getpid())
         parent = proc.parent()
         if parent and parent.cmdline():
-            cmd = ' '.join(parent.cmdline())
+            cmd = ' '.join(parent.cmdline()).lower()
             if 'main.py' in cmd:
                 return 'main'
     except Exception:
@@ -2988,6 +3083,7 @@ def api_players_message():
 @require_permission('can_view_dashboard')
 def api_status():
     """Get server status"""
+    sync_server_state_with_system()
     return jsonify({
         'running': server_state['running'],
         'pid': server_state['pid'],
@@ -3167,6 +3263,7 @@ def handle_connect():
         disconnect()
         return
 
+    sync_server_state_with_system()
     emit('console_history', {'lines': console_lines})
     emit('server_status', {'running': server_state['running']})
     emit('update_status', get_update_payload())
@@ -3174,21 +3271,24 @@ def handle_connect():
                                                    
 
 if __name__ == '__main__':
+    initial_port = _resolve_initial_panel_port()
     parser = argparse.ArgumentParser(description='HappinessMP panel server')
     parser.add_argument(
         '--port',
         type=_panel_port_arg,
-        default=DEFAULT_PANEL_PORT,
-        help=f'Panel HTTP port (default: {DEFAULT_PANEL_PORT})'
+        default=initial_port,
+        help=f'Panel HTTP port (default: {DEFAULT_PANEL_PORT}, or saved/env value if present)'
     )
     args = parser.parse_args()
 
     PANEL_PORT = args.port
+    _persist_panel_port(PANEL_PORT)
 
     add_console_line('=== HAPPINESSMP MANAGER STARTED ===')
     pin = ensure_setup_pin()
     if pin:
         _announce_setup_pin(pin)
+    sync_server_state_with_system()
 
     stats_thread = threading.Thread(target=update_stats, daemon=True)
     stats_thread.start()

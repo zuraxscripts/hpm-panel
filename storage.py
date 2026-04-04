@@ -216,7 +216,8 @@ def load_panel_config():
         'auto_start': False,
         'scheduled_restarts': [],
         'panel_secret': 'changeme',
-        'panel_version': '0.0.0'
+        'panel_version': '0.0.0',
+        'panel_port': 20000
     }
     if db_enabled():
         data = _db_get_app_config('panel')

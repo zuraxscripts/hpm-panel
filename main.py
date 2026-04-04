@@ -5,6 +5,7 @@ Designed to run on Pterodactyl Python egg.
 """
 
 import argparse
+import json
 import subprocess
 import sys
 import os
@@ -13,6 +14,7 @@ import time
 from pathlib import Path
 
 REQUIREMENTS_FILE = "requirements.txt"
+PANEL_CONFIG_FILE = Path("panel_config.json")
 DEFAULT_PANEL_PORT = 20000
 
 processes = []
@@ -27,6 +29,26 @@ def _parse_port(value):
     if port < 1 or port > 65535:
         raise argparse.ArgumentTypeError("Port must be between 1 and 65535")
     return port
+
+
+def _resolve_default_panel_port():
+    env_port = os.getenv("PANEL_PORT") or os.getenv("PORT")
+    if env_port:
+        try:
+            return _parse_port(env_port)
+        except argparse.ArgumentTypeError:
+            pass
+    try:
+        if PANEL_CONFIG_FILE.exists():
+            data = json.loads(PANEL_CONFIG_FILE.read_text(encoding="utf-8-sig"))
+            if isinstance(data, dict) and "panel_port" in data:
+                try:
+                    return _parse_port(data.get("panel_port"))
+                except argparse.ArgumentTypeError:
+                    pass
+    except Exception:
+        pass
+    return DEFAULT_PANEL_PORT
 
 
 def install_dependencies():
@@ -75,12 +97,13 @@ def shutdown(signum=None, frame=None):
 
 
 def main():
+    default_port = _resolve_default_panel_port()
     parser = argparse.ArgumentParser(description="HappinessMP panel launcher")
     parser.add_argument(
         "--port",
         type=_parse_port,
-        default=DEFAULT_PANEL_PORT,
-        help=f"Panel HTTP port (default: {DEFAULT_PANEL_PORT})",
+        default=default_port,
+        help=f"Panel HTTP port (default: {DEFAULT_PANEL_PORT}, or saved/env value if present)",
     )
     args = parser.parse_args()
 

@@ -2110,7 +2110,13 @@
   <div class="toast-wrap" id="toastWrap"></div>
 
   <script>
-    const socket = io();
+    const socket = io({
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 10000
+    });
     let wsOnline = true;
     const wsOverlay = document.getElementById('wsOverlay');
     const wsOverlayDesc = document.getElementById('wsOverlayDesc');
@@ -2130,6 +2136,7 @@
 
     socket.on('connect', () => {
       hideWsOverlay();
+      fetchStatus(true);
     });
     socket.on('disconnect', () => {
       showWsOverlay('Realtime connection lost. Trying to reconnect…');
@@ -2170,6 +2177,7 @@
     let selectedFiles = new Set();
     let updateInfo = null;
     let updatePoller = null;
+    let statusPoller = null;
 
     let mainUserScrolledUp = false;
     let dashUserScrolledUp = false;
@@ -2713,29 +2721,32 @@
       }
     }
 
-    async function fetchStatus(){
-      if(!wsOnline) return;
-      const res = await fetch('/api/status');
-      if(res.status === 401) return (window.location.href = '/login');
-      const data = await res.json();
-      updateStatusIndicator(!!data.running);
-      const pidEl = document.getElementById('pid');
-      if (pidEl) pidEl.textContent = data.pid ? String(data.pid) : '-';
-      const restartEl = document.getElementById('restartCount');
-      if (restartEl) restartEl.textContent = (data.restart_count ?? 0);
-      const autoEl = document.getElementById('autoRestartBadge');
-      if (autoEl) setMiniBadge(autoEl, !!data.auto_restart, t('label_on','On'), t('label_off','Off'));
-      const attachedEl = document.getElementById('attachedBadge');
-      if (attachedEl) setMiniBadge(attachedEl, !!data.attached, t('label_attached','Attached'), t('label_detached','Detached'));
-      updateStatusTimestamp();
-      document.getElementById('uptime').textContent = formatUptime(data.uptime || 0);
-      document.getElementById('cpu').textContent = (data.cpu ?? 0).toFixed(1) + '%';
-      document.getElementById('memory').textContent = (data.memory ?? 0).toFixed(1) + ' MB';
-      if(data.attached){
-        document.getElementById('cmdHint').textContent = t('console_attached_hint');
-      } else {
-        document.getElementById('cmdHint').textContent = '';
-      }
+    async function fetchStatus(force = false){
+      if(!force && !wsOnline) return;
+      try {
+        const res = await fetch('/api/status');
+        if(res.status === 401) return (window.location.href = '/login');
+        if(!res.ok) return;
+        const data = await res.json();
+        updateStatusIndicator(!!data.running);
+        const pidEl = document.getElementById('pid');
+        if (pidEl) pidEl.textContent = data.pid ? String(data.pid) : '-';
+        const restartEl = document.getElementById('restartCount');
+        if (restartEl) restartEl.textContent = (data.restart_count ?? 0);
+        const autoEl = document.getElementById('autoRestartBadge');
+        if (autoEl) setMiniBadge(autoEl, !!data.auto_restart, t('label_on','On'), t('label_off','Off'));
+        const attachedEl = document.getElementById('attachedBadge');
+        if (attachedEl) setMiniBadge(attachedEl, !!data.attached, t('label_attached','Attached'), t('label_detached','Detached'));
+        updateStatusTimestamp();
+        document.getElementById('uptime').textContent = formatUptime(data.uptime || 0);
+        document.getElementById('cpu').textContent = (data.cpu ?? 0).toFixed(1) + '%';
+        document.getElementById('memory').textContent = (data.memory ?? 0).toFixed(1) + ' MB';
+        if(data.attached){
+          document.getElementById('cmdHint').textContent = t('console_attached_hint');
+        } else {
+          document.getElementById('cmdHint').textContent = '';
+        }
+      } catch(e) {}
     }
 
     function updateStatusIndicator(running){
@@ -2759,35 +2770,44 @@
     }
 
     async function apiPost(url, body){
-      if(!wsOnline) return { success: false, message: 'WebSocket disconnected' };
-      const res = await fetch(url, {
-        method:'POST',
-        headers:{'Content-Type':'application/json', 'X-CSRF-Token': csrfToken},
-        body: body ? JSON.stringify(body) : '{}'
-      });
-      if(res.status === 401) window.location.href = '/login';
-      return res.json();
+      try {
+        const res = await fetch(url, {
+          method:'POST',
+          headers:{'Content-Type':'application/json', 'X-CSRF-Token': csrfToken},
+          body: body ? JSON.stringify(body) : '{}'
+        });
+        if(res.status === 401) window.location.href = '/login';
+        return res.json();
+      } catch(e) {
+        return { success: false, message: 'Request failed' };
+      }
     }
 
     async function apiPut(url, body){
-      if(!wsOnline) return { success: false, message: 'WebSocket disconnected' };
-      const res = await fetch(url, {
-        method:'PUT',
-        headers:{'Content-Type':'application/json', 'X-CSRF-Token': csrfToken},
-        body: body ? JSON.stringify(body) : '{}'
-      });
-      if(res.status === 401) window.location.href = '/login';
-      return res.json();
+      try {
+        const res = await fetch(url, {
+          method:'PUT',
+          headers:{'Content-Type':'application/json', 'X-CSRF-Token': csrfToken},
+          body: body ? JSON.stringify(body) : '{}'
+        });
+        if(res.status === 401) window.location.href = '/login';
+        return res.json();
+      } catch(e) {
+        return { success: false, message: 'Request failed' };
+      }
     }
 
     async function apiDelete(url){
-      if(!wsOnline) return { success: false, message: 'WebSocket disconnected' };
-      const res = await fetch(url, {
-        method:'DELETE',
-        headers:{'X-CSRF-Token': csrfToken}
-      });
-      if(res.status === 401) window.location.href = '/login';
-      return res.json();
+      try {
+        const res = await fetch(url, {
+          method:'DELETE',
+          headers:{'X-CSRF-Token': csrfToken}
+        });
+        if(res.status === 401) window.location.href = '/login';
+        return res.json();
+      } catch(e) {
+        return { success: false, message: 'Request failed' };
+      }
     }
 
     async function startServer(){
@@ -5126,6 +5146,9 @@
       await loadCurrentUser();
       applyCmdPerms();
       await fetchStatus();
+      if(!statusPoller){
+        statusPoller = setInterval(() => fetchStatus(true), 5000);
+      }
       await fetchUpdateStatus();
 
       try{

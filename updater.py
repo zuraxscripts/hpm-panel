@@ -67,6 +67,44 @@ def _get_panel_host():
     return f'http://127.0.0.1:{PANEL_PORT}'
 
 
+def _extract_port_from_cmdline(cmdline):
+    if not cmdline:
+        return None
+    for idx, part in enumerate(cmdline):
+        if part == '--port' and idx + 1 < len(cmdline):
+            return _coerce_panel_port(cmdline[idx + 1])
+        if part.startswith('--port='):
+            return _coerce_panel_port(part.split('=', 1)[1])
+    return None
+
+
+def _resolve_panel_port(job: dict):
+    explicit = job.get('panel_port')
+    if explicit is not None:
+        return _coerce_panel_port(explicit)
+
+    pid = job.get('server_manager_pid')
+    if pid:
+        try:
+            import psutil
+            cmdline = psutil.Process(int(pid)).cmdline()
+            parsed = _extract_port_from_cmdline(cmdline)
+            if parsed is not None:
+                return parsed
+        except Exception:
+            pass
+
+    env_port = os.getenv('PANEL_PORT') or os.getenv('PORT')
+    if env_port:
+        return _coerce_panel_port(env_port)
+
+    panel_cfg = _load_panel_config()
+    if isinstance(panel_cfg, dict) and panel_cfg.get('panel_port') is not None:
+        return _coerce_panel_port(panel_cfg.get('panel_port'))
+
+    return DEFAULT_PANEL_PORT
+
+
 def _json_load(path: Path, default):
     try:
         if path.exists():
@@ -483,7 +521,7 @@ def _terminate_process(pid: int):
 def _restart_panel(job: dict):
     restart_mode = job.get('restart_mode') or 'standalone'
     server_pid = job.get('server_manager_pid')
-    panel_port = _coerce_panel_port(job.get('panel_port'))
+    panel_port = _resolve_panel_port(job)
     if restart_mode == 'main':
                                                               
         restart_flag = DATA_DIR / 'restart.flag'
@@ -512,7 +550,7 @@ def main():
 
     job_path = Path(args.job).resolve()
     job = _json_load(job_path, {})
-    _set_panel_port(job.get('panel_port'))
+    _set_panel_port(_resolve_panel_port(job))
     targets = job.get('targets') or []
 
     _status.update(STATUS_TEMPLATE)
