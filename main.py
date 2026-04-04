@@ -4,6 +4,7 @@ Handles dependency installation and starts all services.
 Designed to run on Pterodactyl Python egg.
 """
 
+import argparse
 import subprocess
 import sys
 import os
@@ -12,9 +13,20 @@ import time
 from pathlib import Path
 
 REQUIREMENTS_FILE = "requirements.txt"
+DEFAULT_PANEL_PORT = 20000
 
 processes = []
 RESTART_FLAG = Path("data") / "restart.flag"
+
+
+def _parse_port(value):
+    try:
+        port = int(value)
+    except (TypeError, ValueError):
+        raise argparse.ArgumentTypeError("Port must be an integer")
+    if port < 1 or port > 65535:
+        raise argparse.ArgumentTypeError("Port must be between 1 and 65535")
+    return port
 
 
 def install_dependencies():
@@ -63,6 +75,15 @@ def shutdown(signum=None, frame=None):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="HappinessMP panel launcher")
+    parser.add_argument(
+        "--port",
+        type=_parse_port,
+        default=DEFAULT_PANEL_PORT,
+        help=f"Panel HTTP port (default: {DEFAULT_PANEL_PORT})",
+    )
+    args = parser.parse_args()
+
                               
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
@@ -77,9 +98,9 @@ def main():
     print()
 
                                      
-    print("[INFO] Starting Web Control Panel...")
+    print(f"[INFO] Starting Web Control Panel on port {args.port}...")
     web_proc = subprocess.Popen(
-        [sys.executable, "server_manager.py"],
+        [sys.executable, "server_manager.py", "--port", str(args.port)],
         stdout=sys.stdout,
         stderr=sys.stderr,
     )

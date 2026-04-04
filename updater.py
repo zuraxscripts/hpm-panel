@@ -23,7 +23,8 @@ USER_AGENT = 'HPM-Panel-Updater/1.0'
 DATA_DIR = ROOT_DIR / 'data'
 STATUS_FILE = DATA_DIR / 'update_status.json'
 LOG_FILE = DATA_DIR / 'update.log'
-PANEL_DEFAULT_HOST = 'http://127.0.0.1:20000'
+DEFAULT_PANEL_PORT = 20000
+PANEL_PORT = DEFAULT_PANEL_PORT
 CONNECTOR_API_URL = 'https://api.github.com/repos/zuraxscripts/hpm-connector/releases/latest'
 
 
@@ -45,6 +46,25 @@ STATUS_TEMPLATE = {
 
 
 _status = dict(STATUS_TEMPLATE)
+
+
+def _coerce_panel_port(value):
+    try:
+        port = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_PANEL_PORT
+    if port < 1 or port > 65535:
+        return DEFAULT_PANEL_PORT
+    return port
+
+
+def _set_panel_port(value):
+    global PANEL_PORT
+    PANEL_PORT = _coerce_panel_port(value)
+
+
+def _get_panel_host():
+    return f'http://127.0.0.1:{PANEL_PORT}'
 
 
 def _json_load(path: Path, default):
@@ -293,7 +313,7 @@ def _install_connector(server_dir: Path):
 
 
 def _update_connector_config(server_dir: Path, panel_secret: str, panel_host: str = None):
-    panel_host = panel_host or PANEL_DEFAULT_HOST
+    panel_host = panel_host or _get_panel_host()
     server_lua = server_dir / 'resources' / 'hpm-connector' / 'server.lua'
     if not server_lua.exists():
         raise RuntimeError('hpm-connector server.lua not found')
@@ -427,7 +447,7 @@ def perform_happiness_update(happiness_zip_url: str, happiness_version: str, sta
     panel_secret = panel_cfg.get('panel_secret') or ''
     if panel_secret:
         try:
-            _update_connector_config(server_dir, panel_secret, PANEL_DEFAULT_HOST)
+            _update_connector_config(server_dir, panel_secret, _get_panel_host())
         except Exception:
             pass
     try:
@@ -463,6 +483,7 @@ def _terminate_process(pid: int):
 def _restart_panel(job: dict):
     restart_mode = job.get('restart_mode') or 'standalone'
     server_pid = job.get('server_manager_pid')
+    panel_port = _coerce_panel_port(job.get('panel_port'))
     if restart_mode == 'main':
                                                               
         restart_flag = DATA_DIR / 'restart.flag'
@@ -474,9 +495,9 @@ def _restart_panel(job: dict):
     _log('Starting panel process...')
     cwd = str(ROOT_DIR)
     if (ROOT_DIR / 'main.py').exists():
-        cmd = [sys.executable, 'main.py']
+        cmd = [sys.executable, 'main.py', '--port', str(panel_port)]
     else:
-        cmd = [sys.executable, 'server_manager.py']
+        cmd = [sys.executable, 'server_manager.py', '--port', str(panel_port)]
     try:
         subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
@@ -491,6 +512,7 @@ def main():
 
     job_path = Path(args.job).resolve()
     job = _json_load(job_path, {})
+    _set_panel_port(job.get('panel_port'))
     targets = job.get('targets') or []
 
     _status.update(STATUS_TEMPLATE)

@@ -10,6 +10,7 @@ except ImportError:
     pass                                        
 
 import os
+import argparse
 import sys
 import subprocess
 import threading
@@ -97,7 +98,22 @@ BANS_FILE = DATA_DIR / 'bans.json'
 SETUP_SERVER_ZIP_URL = 'https://happinessmp.net/files/HappinessMP%20Server%201.9%20Linux.zip'
 SETUP_CONNECTOR_API_URL = 'https://api.github.com/repos/zuraxscripts/hpm-connector/releases/latest'
 SETUP_DOWNLOAD_DIR = DATA_DIR / 'downloads'
-PANEL_DEFAULT_HOST = 'http://127.0.0.1:20000'
+DEFAULT_PANEL_PORT = 20000
+PANEL_PORT = DEFAULT_PANEL_PORT
+
+
+def _panel_port_arg(value):
+    try:
+        port = int(value)
+    except (TypeError, ValueError):
+        raise argparse.ArgumentTypeError('Port must be an integer')
+    if port < 1 or port > 65535:
+        raise argparse.ArgumentTypeError('Port must be between 1 and 65535')
+    return port
+
+
+def get_panel_host():
+    return f'http://127.0.0.1:{PANEL_PORT}'
 
 setup_state = {
     'running': False,
@@ -1110,7 +1126,7 @@ def ensure_connector_resource():
 
 def update_connector_config(panel_secret: str, panel_host: str = None):
     """Update hpm-connector server.lua with panel host + secret."""
-    panel_host = panel_host or PANEL_DEFAULT_HOST
+    panel_host = panel_host or get_panel_host()
     server_lua = Path(get_server_dir()) / 'resources' / 'hpm-connector' / 'server.lua'
     if not server_lua.exists():
         raise RuntimeError('hpm-connector server.lua not found')
@@ -1589,7 +1605,7 @@ def api_setup():
                                                        
             install_hpm_connector()
             ensure_connector_resource()
-            update_connector_config(panel_config.get('panel_secret'), PANEL_DEFAULT_HOST)
+            update_connector_config(panel_config.get('panel_secret'), get_panel_host())
 
                                                       
             _setup_update(step='User', progress=95, message='Creating admin account')
@@ -1913,7 +1929,7 @@ def api_set_panel_config():
         if not verify_user_password(session.get('username'), admin_password):
             return jsonify({'success': False, 'message': 'Invalid password'}), 403
         try:
-            update_connector_config(incoming_secret, PANEL_DEFAULT_HOST)
+            update_connector_config(incoming_secret, get_panel_host())
         except Exception as e:
             return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -3104,6 +3120,7 @@ def api_update_start():
             'version': payload.get('happiness', {}).get('latest'),
             'zip_url': payload.get('happiness', {}).get('zip_url')
         },
+        'panel_port': PANEL_PORT,
         'server_manager_pid': os.getpid(),
         'restart_mode': _detect_restart_mode()
     }
@@ -3149,41 +3166,49 @@ def handle_connect():
                                                    
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='HappinessMP panel server')
+    parser.add_argument(
+        '--port',
+        type=_panel_port_arg,
+        default=DEFAULT_PANEL_PORT,
+        help=f'Panel HTTP port (default: {DEFAULT_PANEL_PORT})'
+    )
+    args = parser.parse_args()
+
+    PANEL_PORT = args.port
+
     add_console_line('=== HAPPINESSMP MANAGER STARTED ===')
     pin = ensure_setup_pin()
     if pin:
         _announce_setup_pin(pin)
 
-                              
     stats_thread = threading.Thread(target=update_stats, daemon=True)
     stats_thread.start()
 
-                               
     sched_thread = threading.Thread(target=scheduled_restart_thread, daemon=True)
     sched_thread.start()
 
-                                                         
     update_thread = threading.Thread(target=_update_check_loop, daemon=True)
     update_thread.start()
 
-                                     
     if panel_config.get('auto_start', False):
         add_console_line('=== AUTO-START ENABLED ===')
 
         def _auto_start():
-            time.sleep(2)                                     
+            time.sleep(2)
             start_server('SYSTEM')
 
         threading.Thread(target=_auto_start, daemon=True).start()
 
-    print("""
-╔═══════════════════════════════════════════════════════════╗
-║       HappinessMP Server Manager - Pterodactyl Style      ║
-║                                                           ║
-║  Access: http://0.0.0.0:20000                             ║
-║                                                           ║
-║  First time? Complete setup to create admin account      ║
-╚═══════════════════════════════════════════════════════════╝
-    """)
+    print(
+        '\n'
+        '=======================================================\n'
+        '  HappinessMP Server Manager - Pterodactyl Style\n'
+        '\n'
+        f'  Access: http://0.0.0.0:{PANEL_PORT}\n'
+        '\n'
+        '  First time? Complete setup to create admin account\n'
+        '=======================================================\n'
+    )
 
-    socketio.run(app, host='0.0.0.0', port=20000, debug=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=PANEL_PORT, debug=False, allow_unsafe_werkzeug=True)
