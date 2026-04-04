@@ -296,13 +296,24 @@ def save_bans(bans):
     storage.save_bans(bans)
 
 
+def normalize_player_ip(ip):
+    value = str(ip or '').strip()
+    if value.lower().startswith('::ffff:'):
+        return value[7:]
+    return value
+
+
 def is_player_banned(ip=None, name=None):
     """Check if a player is banned by IP or name."""
+    ip_norm = normalize_player_ip(ip)
+    name_norm = str(name or '').strip().lower()
     bans = load_bans()
     for ban in bans:
-        if ip and ban.get('ip') == ip and ban.get('ip'):
+        ban_ip = normalize_player_ip(ban.get('ip'))
+        ban_name = str(ban.get('name', '')).strip().lower()
+        if ip_norm and ban_ip == ip_norm and ban_ip:
             return True, ban
-        if name and ban.get('name', '').lower() == name.lower() and ban.get('name'):
+        if name_norm and ban_name == name_norm and ban_name:
             return True, ban
     return False, None
 
@@ -2578,10 +2589,11 @@ def api_list_users():
 @admin_required
 def api_create_user():
     """Create new user"""
-    data = request.json
+    data = request.json or {}
     username = data.get('username', '').strip()
     role = data.get('role', 'user')
     permissions = data.get('permissions', None)
+    password = (data.get('password') or '').strip()
 
     if not username:
         return jsonify({'success': False, 'message': 'Username required'})
@@ -2590,8 +2602,12 @@ def api_create_user():
     if not re.match(r'^[a-zA-Z0-9_]{3,32}$', username):
         return jsonify({'success': False, 'message': 'Username must be 3-32 alphanumeric characters (a-z, 0-9, _)'})
 
-                              
-    password = generate_password()
+    generated_password = False
+    if not password:
+        password = generate_password()
+        generated_password = True
+    elif len(password) < 8:
+        return jsonify({'success': False, 'message': 'Password must be at least 8 characters'})
 
     success, message = create_user(username, password, role=role, force_password_change=True, permissions=permissions)
 
@@ -2602,7 +2618,8 @@ def api_create_user():
             'success': True,
             'message': message,
             'password': password,
-            'username': username
+            'username': username,
+            'generated_password': generated_password
         })
 
     return jsonify({'success': False, 'message': message})
@@ -2838,7 +2855,8 @@ def api_panel_hook_player_join():
     data = request.json or {}
     server_id = data.get('serverId')
     name = data.get('name', 'Unknown')
-    ip = data.get('ip', '')
+    ip = normalize_player_ip(data.get('ip', ''))
+    data['ip'] = ip
 
                   
     if server_id is not None:
@@ -2894,7 +2912,9 @@ def api_panel_hook_players_sync():
     for p in players:
         sid = str(p.get('serverId', ''))
         if sid:
-            new_players[sid] = p
+            row = dict(p)
+            row['ip'] = normalize_player_ip(row.get('ip', ''))
+            new_players[sid] = row
     connected_players = new_players
 
     socketio.emit('players_update', {'players': list(connected_players.values())})
@@ -2982,7 +3002,7 @@ def api_players_ban():
     global pending_actions
     data = request.json or {}
     server_id = data.get('serverId')
-    ip = data.get('ip', '').strip()
+    ip = normalize_player_ip(data.get('ip', '').strip())
     name = data.get('name', '').strip()
     reason = data.get('reason', 'Banned by admin')
 

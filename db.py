@@ -200,5 +200,16 @@ def ensure_schema():
             cur.execute("SHOW COLUMNS FROM users LIKE 'avatar'")
             if not cur.fetchone():
                 cur.execute("ALTER TABLE users ADD COLUMN avatar MEDIUMTEXT")
+            cur.execute("SHOW COLUMNS FROM users LIKE 'password_hash'")
+            row = cur.fetchone()
+            if row:
+                col_type = str(row.get('Type') or '').lower().strip()
+                if col_type.startswith('varchar(') and col_type.endswith(')'):
+                    try:
+                        size = int(col_type[len('varchar('):-1])
+                    except Exception:
+                        size = 255
+                    if size < 255:
+                        cur.execute("ALTER TABLE users MODIFY COLUMN password_hash VARCHAR(255) NOT NULL")
     finally:
         conn.close()

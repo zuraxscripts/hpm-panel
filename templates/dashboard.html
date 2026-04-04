@@ -992,6 +992,24 @@
     .file-row{cursor:pointer;transition:background .12s;}
     .file-row:hover{background:rgba(255,255,255,.03);}
     .file-actions{display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap;}
+    .player-ip{
+      display:inline-flex;
+      align-items:center;
+      font-family:ui-monospace,monospace;
+      font-size:12px;
+      line-height:1;
+      border:1px dashed rgba(255,255,255,.18);
+      border-radius:8px;
+      padding:4px 8px;
+      background:rgba(0,0,0,.28);
+    }
+    .player-ip .ip-value{display:none;color:var(--text);}
+    .player-ip .ip-mask{color:var(--muted);letter-spacing:.12em;}
+    .player-ip:hover .ip-mask{display:none;}
+    .player-ip:hover .ip-value{display:inline;}
+    .player-row-enter{
+      animation:listFadeIn .2s ease-out;
+    }
 
     .warn-banner{
       padding:10px 14px;border-radius:14px;
@@ -1171,7 +1189,8 @@
       width: 360px;
       border-radius:18px;
       border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.55);
+      background: linear-gradient(180deg, rgba(20,22,28,.95), rgba(11,13,18,.95));
+      backdrop-filter: blur(8px);
       box-shadow: 0 12px 40px rgba(0,0,0,.45);
       padding:12px 12px;
       display:flex; gap:10px;
@@ -1188,8 +1207,8 @@
       background: rgba(255,255,255,.06);
       flex:0 0 auto;
     }
-    .toastx .t{font-weight:750; margin-bottom:2px;}
-    .toastx .m{color:var(--muted); font-size:12px; line-height:1.3;}
+    .toastx .t{font-weight:750; margin-bottom:2px; color:var(--text);}
+    .toastx .m{color:rgba(236,240,255,.92); font-size:12px; line-height:1.3;}
     .toastx.success .ic{ background: rgba(34,197,94,.14); border-color: rgba(34,197,94,.28); }
     .toastx.error .ic{ background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.28); }
     .toastx.info .ic{ background: rgba(59,130,246,.14); border-color: rgba(59,130,246,.28); }
@@ -1935,6 +1954,11 @@
           <div class="form-hint" data-i18n="admin_create_role_hint">Admin bypasses permission checks. For normal users, toggles below apply.</div>
         </div>
         <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="inputx" id="newUserPassword" type="password" placeholder="Leave empty to auto-generate" />
+          <div class="form-hint">Minimum 8 characters. Leave empty to generate random password.</div>
+        </div>
+        <div class="form-group">
           <label class="form-label" data-i18n="admin_create_perms">Permissions</label>
           <div class="perm-grid">
             <label class="checkbox"><input type="checkbox" id="perm_view_dashboard" checked> <span data-i18n="admin_perm_view_dashboard">View Dashboard</span></label>
@@ -2178,6 +2202,7 @@
     let updateInfo = null;
     let updatePoller = null;
     let statusPoller = null;
+    let playersSignature = '';
 
     let mainUserScrolledUp = false;
     let dashUserScrolledUp = false;
@@ -4136,6 +4161,7 @@
       document.getElementById('createUserModal').classList.add('active');
       document.getElementById('generatedPasswordContainer').style.display = 'none';
       document.getElementById('newUsername').value = '';
+      document.getElementById('newUserPassword').value = '';
       document.getElementById('newUserRole').value = 'user';
       document.getElementById('perm_view_dashboard').checked = true;
       document.getElementById('perm_control_server').checked = true;
@@ -4151,8 +4177,10 @@
 
     async function createUser(){
       const username = document.getElementById('newUsername').value.trim();
+      const password = document.getElementById('newUserPassword').value.trim();
       const role = document.getElementById('newUserRole').value;
       if(!username){ toast('error', t('label_create_user','Create user'), t('admin_username_required','Username is required')); return; }
+      if(password && password.length < 8){ toast('error', t('label_create_user','Create user'), t('profile_password_short','Password must be at least 8 characters.')); return; }
 
       const permissions = {
         can_view_dashboard: document.getElementById('perm_view_dashboard').checked,
@@ -4175,7 +4203,7 @@
         const res = await fetch('/api/users', {
           method:'POST',
           headers:{'Content-Type':'application/json', 'X-CSRF-Token': csrfToken},
-          body: JSON.stringify({ username, role, permissions })
+          body: JSON.stringify({ username, password, role, permissions })
         });
         if(res.status === 401) return (window.location.href = '/login');
         const data = await res.json();
@@ -4188,22 +4216,12 @@
 
         document.getElementById('generatedPassword').value = data.password || '';
         document.getElementById('generatedPasswordContainer').style.display = 'block';
+        document.getElementById('newUserPassword').value = '';
 
         toast('success', t('label_create_user','Create user'), t('toast_user_created').replace('{user}', data.username));
-        btn.innerHTML = `<i class="fa-solid fa-check"></i> ${t('btn_done','Done')}`;
-        btn.classList.remove('primary');
-        btn.classList.add('success');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-plus"></i> ${t('btn_create_user')}`;
         loadUsers();
-
-        btn.onclick = () => {
-          closeCreateUserModal();
-          btn.disabled = false;
-          btn.classList.remove('success');
-          btn.classList.add('primary');
-          btn.innerHTML = `<i class="fa-solid fa-plus"></i> ${t('btn_create_user')}`;
-          btn.onclick = null;
-          document.getElementById('btnCreateUser').addEventListener('click', createUser);
-        };
       } catch(e){
         toast('error', t('label_create_user','Create user'), t('error_failed','Failed'));
         btn.disabled = false;
@@ -4588,131 +4606,177 @@
       }
     }
 
+    function normalizePlayerIp(ip){
+      const value = String(ip || '').trim();
+      if(!value) return '';
+      return value.replace(/^::ffff:/i, '');
+    }
+
+    function playersPayloadSignature(players){
+      return (players || [])
+        .map(p => [
+          String(p.serverId ?? ''),
+          String(p.name ?? ''),
+          Number(p.ping ?? 0),
+          normalizePlayerIp(p.ip),
+          Number(p.session ?? 0),
+          p.sessionActive ? 1 : 0
+        ].join('|'))
+        .sort()
+        .join('||');
+    }
+
+    function setPlayerCounters(count){
+      const countEl = document.getElementById('playerCount');
+      if(countEl) countEl.textContent = count;
+      const badgeEl = document.getElementById('playerCountBadge');
+      if(badgeEl) badgeEl.textContent = count;
+    }
+
+    function renderPlayersRows(players, opts = {}){
+      const body = document.getElementById('playersList');
+      const list = Array.isArray(players) ? players : [];
+      setPlayerCounters(list.length);
+
+      const nextSignature = playersPayloadSignature(list);
+      if(!opts.force && playersSignature === nextSignature){
+        return false;
+      }
+      playersSignature = nextSignature;
+
+      if(list.length === 0) {
+        body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);">${t('players_empty','No players connected.')}</td></tr>`;
+        return true;
+      }
+
+      body.innerHTML = '';
+      list.forEach(p => {
+        const tr = document.createElement('tr');
+        if(opts.animate) tr.classList.add('player-row-enter');
+        const activeClass = p.sessionActive ? 'success' : 'warn';
+        const activeLabel = p.sessionActive ? t('admin_yes','Yes') : t('admin_no','No');
+        const isAdmin = currentUser && currentUser.role === 'admin';
+        const canKick = currentUser && (currentUser.role === 'admin' || (currentUser.permissions && currentUser.permissions.can_control_server));
+        const cleanIp = normalizePlayerIp(p.ip || '');
+        const ipCell = cleanIp
+          ? `<span class="player-ip" title="${escapeHtml(cleanIp)}"><span class="ip-mask">**********</span><span class="ip-value">${escapeHtml(cleanIp)}</span></span>`
+          : '-';
+
+        let actionsHtml = '<div class="file-actions">';
+        if(canKick) {
+          actionsHtml += `<button class="btnx sm warning" data-player-act="kick" data-sid="${escapeHtml(p.serverId)}" data-name="${escapeHtml(p.name)}"><i class="fa-solid fa-shoe-prints"></i> ${t('btn_kick','Kick')}</button>`;
+        }
+        if(isAdmin) {
+          actionsHtml += `<button class="btnx sm danger" data-player-act="ban" data-sid="${escapeHtml(p.serverId)}" data-name="${escapeHtml(p.name)}" data-ip="${escapeHtml(cleanIp)}"><i class="fa-solid fa-gavel"></i> ${t('btn_ban','Ban')}</button>`;
+        }
+        actionsHtml += `<button class="btnx sm" data-player-act="msg" data-sid="${escapeHtml(p.serverId)}" data-name="${escapeHtml(p.name)}" title="${t('btn_message','Message')}"><i class="fa-solid fa-comment"></i></button>`;
+        actionsHtml += '</div>';
+
+        tr.innerHTML = `
+          <td style="font-weight:600;">${escapeHtml(p.serverId)}</td>
+          <td><i class="fa-solid fa-user" style="color:var(--primary);margin-right:6px;"></i>${escapeHtml(p.name)}</td>
+          <td>${p.ping || 0} ms</td>
+          <td>${ipCell}</td>
+          <td>${p.session ?? 0}</td>
+          <td><span class="badgeX ${activeClass}" style="font-size:11px;padding:3px 8px;">${activeLabel}</span></td>
+          <td>${actionsHtml}</td>
+        `;
+        body.appendChild(tr);
+      });
+
+      body.querySelectorAll('button[data-player-act]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const act = btn.getAttribute('data-player-act');
+          const sid = parseInt(btn.getAttribute('data-sid'));
+          const name = btn.getAttribute('data-name');
+          const ip = normalizePlayerIp(btn.getAttribute('data-ip') || '');
+
+          if(act === 'kick') {
+            const res = await openInputModal({
+              title: t('players_kick_title','Kick Player'),
+              submitText: t('btn_kick','Kick'),
+              field1: {
+                label: t('players_kick_reason_label','Reason (optional)'),
+                placeholder: t('players_kick_default','Kicked by admin'),
+                value: t('players_kick_default','Kicked by admin'),
+                required: false
+              }
+            });
+            if(res === null) return;
+            const reason = res.field1 || t('players_kick_default','Kicked by admin');
+            const out = await apiPost('/api/players/kick', { serverId: sid, reason: reason });
+            if(out.success) toast('success', t('label_player','Player'), out.message || t('players_kick_queued','Kick queued'));
+            else toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
+          }
+
+          if(act === 'ban') {
+            const res = await openInputModal({
+              title: t('players_ban_title','Ban Player'),
+              submitText: t('btn_ban','Ban'),
+              field1: {
+                label: t('players_ban_reason_label','Reason'),
+                placeholder: t('players_ban_default','Banned by admin'),
+                value: t('players_ban_default','Banned by admin'),
+                required: true
+              }
+            });
+            if(res === null) return;
+            const reason = res.field1 || t('players_ban_default','Banned by admin');
+            const out = await apiPost('/api/players/ban', { serverId: sid, name: name, ip: ip, reason: reason });
+            if(out.success) {
+              toast('success', t('label_player','Player'), out.message || t('players_banned','Banned'));
+              loadBans();
+            }
+            else toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
+          }
+
+          if(act === 'msg') {
+            const res = await openInputModal({
+              title: t('players_message_title','Message Player'),
+              submitText: t('btn_send','Send'),
+              field1: {
+                label: t('players_message_label','Message'),
+                placeholder: t('players_message_prompt','Send message to {name}:').replace('{name}', name),
+                required: true,
+                multiline: true
+              },
+              field2: {
+                label: t('broadcast_duration_label','Duration (sec)'),
+                placeholder: '5',
+                value: '5',
+                type: 'number',
+                required: false
+              }
+            });
+            if(!res) return;
+            const msg = res.field1;
+            const duration = parseInt(res.field2 || '5', 10) || 5;
+            const out = await apiPost('/api/players/message', { serverId: sid, message: msg, duration: duration });
+            if(out.success) toast('success', t('label_player','Player'), t('players_message_sent','Message sent'));
+            else toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
+          }
+        });
+      });
+      return true;
+    }
+
     async function loadPlayers(opts = {}) {
       if(!opts.noFade){
-        return refreshWithFade('playersList', () => loadPlayers({ noFade: true }));
+        return refreshWithFade('playersList', () => loadPlayers({ noFade: true, force: true }));
       }
       const body = document.getElementById('playersList');
       try {
         const res = await fetch('/api/players');
         if(res.status === 401) return (window.location.href = '/login');
         if(res.status === 403) {
+          playersSignature = '';
           body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);">${t('error_no_permission','Permission denied')}</td></tr>`;
           return;
         }
         const data = await res.json();
-        const players = data.players || [];
-        document.getElementById('playerCountBadge').textContent = players.length;
-
-        if(players.length === 0) {
-          body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);">${t('players_empty','No players connected.')}</td></tr>`;
-          return;
-        }
-
-        body.innerHTML = '';
-        players.forEach(p => {
-          const tr = document.createElement('tr');
-          const activeClass = p.sessionActive ? 'success' : 'warn';
-          const activeLabel = p.sessionActive ? t('admin_yes','Yes') : t('admin_no','No');
-          const isAdmin = currentUser && currentUser.role === 'admin';
-          const canKick = currentUser && (currentUser.role === 'admin' || (currentUser.permissions && currentUser.permissions.can_control_server));
-
-          let actionsHtml = '<div class="file-actions">';
-          if(canKick) {
-            actionsHtml += `<button class="btnx sm warning" data-player-act="kick" data-sid="${escapeHtml(p.serverId)}" data-name="${escapeHtml(p.name)}"><i class="fa-solid fa-shoe-prints"></i> ${t('btn_kick','Kick')}</button>`;
-          }
-          if(isAdmin) {
-            actionsHtml += `<button class="btnx sm danger" data-player-act="ban" data-sid="${escapeHtml(p.serverId)}" data-name="${escapeHtml(p.name)}" data-ip="${escapeHtml(p.ip || '')}"><i class="fa-solid fa-gavel"></i> ${t('btn_ban','Ban')}</button>`;
-          }
-          actionsHtml += `<button class="btnx sm" data-player-act="msg" data-sid="${escapeHtml(p.serverId)}" data-name="${escapeHtml(p.name)}" title="${t('btn_message','Message')}"><i class="fa-solid fa-comment"></i></button>`;
-          actionsHtml += '</div>';
-
-          tr.innerHTML = `
-            <td style="font-weight:600;">${escapeHtml(p.serverId)}</td>
-            <td><i class="fa-solid fa-user" style="color:var(--primary);margin-right:6px;"></i>${escapeHtml(p.name)}</td>
-            <td>${p.ping || 0} ms</td>
-            <td style="font-family:ui-monospace,monospace;font-size:12px;">${escapeHtml(p.ip || '-')}</td>
-            <td>${p.session ?? 0}</td>
-            <td><span class="badgeX ${activeClass}" style="font-size:11px;padding:3px 8px;">${activeLabel}</span></td>
-            <td>${actionsHtml}</td>
-          `;
-          body.appendChild(tr);
-        });
-
-        body.querySelectorAll('button[data-player-act]').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const act = btn.getAttribute('data-player-act');
-            const sid = parseInt(btn.getAttribute('data-sid'));
-            const name = btn.getAttribute('data-name');
-            const ip = btn.getAttribute('data-ip') || '';
-
-            if(act === 'kick') {
-              const res = await openInputModal({
-                title: t('players_kick_title','Kick Player'),
-                submitText: t('btn_kick','Kick'),
-                field1: {
-                  label: t('players_kick_reason_label','Reason (optional)'),
-                  placeholder: t('players_kick_default','Kicked by admin'),
-                  value: t('players_kick_default','Kicked by admin'),
-                  required: false
-                }
-              });
-              if(res === null) return;
-              const reason = res.field1 || t('players_kick_default','Kicked by admin');
-              const out = await apiPost('/api/players/kick', { serverId: sid, reason: reason });
-              if(out.success) toast('success', t('label_player','Player'), out.message || t('players_kick_queued','Kick queued'));
-              else toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
-            }
-
-            if(act === 'ban') {
-              const res = await openInputModal({
-                title: t('players_ban_title','Ban Player'),
-                submitText: t('btn_ban','Ban'),
-                field1: {
-                  label: t('players_ban_reason_label','Reason'),
-                  placeholder: t('players_ban_default','Banned by admin'),
-                  value: t('players_ban_default','Banned by admin'),
-                  required: true
-                }
-              });
-              if(res === null) return;
-              const reason = res.field1 || t('players_ban_default','Banned by admin');
-              const out = await apiPost('/api/players/ban', { serverId: sid, name: name, ip: ip, reason: reason });
-              if(out.success) {
-                toast('success', t('label_player','Player'), out.message || t('players_banned','Banned'));
-                loadBans();
-              }
-              else toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
-            }
-
-            if(act === 'msg') {
-              const res = await openInputModal({
-                title: t('players_message_title','Message Player'),
-                submitText: t('btn_send','Send'),
-                field1: {
-                  label: t('players_message_label','Message'),
-                  placeholder: t('players_message_prompt','Send message to {name}:').replace('{name}', name),
-                  required: true,
-                  multiline: true
-                },
-                field2: {
-                  label: t('broadcast_duration_label','Duration (sec)'),
-                  placeholder: '5',
-                  value: '5',
-                  type: 'number',
-                  required: false
-                }
-              });
-              if(!res) return;
-              const msg = res.field1;
-              const duration = parseInt(res.field2 || '5', 10) || 5;
-              const out = await apiPost('/api/players/message', { serverId: sid, message: msg, duration: duration });
-              if(out.success) toast('success', t('label_player','Player'), t('players_message_sent','Message sent'));
-              else toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
-            }
-          });
-        });
+        renderPlayersRows(data.players || [], { force: !!opts.force, animate: !!opts.animate });
       } catch(e) {
+        playersSignature = '';
         body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);">${t('players_load_failed','Failed to load players.')}</td></tr>`;
       }
     }
@@ -4744,9 +4808,10 @@
         bans.forEach((b, idx) => {
           const tr = document.createElement('tr');
           const date = b.banned_at ? new Date(b.banned_at).toLocaleString() : '-';
+          const cleanBanIp = normalizePlayerIp(b.ip || '');
           tr.innerHTML = `
             <td>${escapeHtml(b.name || '-')}</td>
-            <td style="font-family:ui-monospace,monospace;font-size:12px;">${escapeHtml(b.ip || '-')}</td>
+            <td style="font-family:ui-monospace,monospace;font-size:12px;">${escapeHtml(cleanBanIp || '-')}</td>
             <td>${escapeHtml(b.reason || '-')}</td>
             <td>${escapeHtml(b.banned_by || '-')}</td>
             <td style="font-size:12px;">${date}</td>
@@ -4813,12 +4878,9 @@
 
     socket.on('players_update', (data) => {
       const players = data.players || [];
-      const countEl = document.getElementById('playerCount');
-      if(countEl) countEl.textContent = players.length;
-      const badgeEl = document.getElementById('playerCountBadge');
-      if(badgeEl) badgeEl.textContent = players.length;
+      setPlayerCounters(players.length);
       if(currentPage === 'players') {
-        loadPlayers();
+        renderPlayersRows(players, { animate: true });
       }
     });
 
