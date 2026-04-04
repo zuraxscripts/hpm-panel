@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
-  <!-- CodeMirror 6 -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.min.css">
   <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
@@ -61,7 +60,6 @@
       min-height:100vh;
     }
 
-    /* ===== SIDEBAR ===== */
     .sidebar{
       position:sticky;
       top:0;
@@ -205,7 +203,6 @@
     }
     .btn-soft:active{transform: translateY(0) scale(.99)}
 
-    /* ===== MAIN ===== */
     .main{
       padding:18px;
       min-width:0;
@@ -445,7 +442,6 @@
       to{opacity:1; transform: translateY(0);}
     }
 
-    /* Console */
     .console{
       height: 360px;
       overflow:auto;
@@ -615,7 +611,6 @@
       margin-top:6px;
     }
 
-    /* Tables */
     .table-wrap{
       border:1px solid rgba(255,255,255,.08);
       border-radius:16px;
@@ -758,7 +753,6 @@
       color: #c7d2fe;
     }
 
-    /* Confirm modal */
     .confirm-modal .modal-body-custom{
       text-align:center;
       padding:24px 16px;
@@ -781,7 +775,6 @@
     .badgeX.info{ border-color: rgba(59,130,246,.28); background: rgba(59,130,246,.14); }
     .badgeX.warn{ border-color: rgba(245,158,11,.28); background: rgba(245,158,11,.14); }
 
-    /* Checkbox perms */
     .perm-grid{
       display:grid;
       grid-template-columns: repeat(2, minmax(0,1fr));
@@ -804,7 +797,6 @@
     }
     .checkbox input{ accent-color: var(--primary); }
 
-    /* Modal */
     .modal-custom{
       position:fixed; inset:0;
       display:none;
@@ -972,14 +964,12 @@
     }
     .input-error.visible{ display:block; }
 
-    /* Toggle switch */
     .toggle-wrap{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
     .toggle{width:44px;height:24px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.10);position:relative;transition:background .2s,border-color .2s;flex-shrink:0;}
     .toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:999px;background:var(--text);transition:transform .2s;}
     .toggle.on{background:rgba(79,70,229,.5);border-color:rgba(79,70,229,.6);}
     .toggle.on::after{transform:translateX(20px);}
 
-    /* Breadcrumbs */
     .breadcrumbs{
       display:flex; align-items:center; gap:6px;
       padding:10px 14px;
@@ -999,12 +989,10 @@
     .breadcrumbs .bc-sep{color:var(--muted);font-size:11px;}
     .breadcrumbs .bc-current{color:var(--text);cursor:default;}
 
-    /* File row */
     .file-row{cursor:pointer;transition:background .12s;}
     .file-row:hover{background:rgba(255,255,255,.03);}
     .file-actions{display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap;}
 
-    /* Warning banner */
     .warn-banner{
       padding:10px 14px;border-radius:14px;
       border:1px solid rgba(245,158,11,.25);
@@ -1014,7 +1002,6 @@
       display:flex;align-items:center;gap:8px;
     }
 
-    /* Tag list */
     .tag-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
     .tag{
       display:inline-flex;align-items:center;gap:6px;
@@ -1026,7 +1013,6 @@
     .tag .tag-remove{cursor:pointer;opacity:.6;transition:opacity .12s;}
     .tag .tag-remove:hover{opacity:1;}
 
-    /* Logs */
     .logs-wrap{
       display:flex;
       flex-direction:column;
@@ -1166,7 +1152,6 @@
     .log-card.log-command::before{ background: #c084fc; }
     .log-card.log-edit::before{ background: #fb923c; }
 
-    /* Logs colors */
     .log-action.log-login{ color:var(--info); border-color: rgba(59,130,246,.4); background: rgba(59,130,246,.12); }
     .log-action.log-logout{ color:var(--muted); border-color: rgba(148,163,184,.3); background: rgba(148,163,184,.10); }
     .log-action.log-start{ color:var(--success); border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.12); }
@@ -1175,7 +1160,6 @@
     .log-action.log-command{ color:#c084fc; border-color: rgba(192,132,252,.45); background: rgba(192,132,252,.12); }
     .log-action.log-edit{ color:#fb923c; border-color: rgba(251,146,60,.45); background: rgba(251,146,60,.12); }
 
-    /* Toast */
     .toast-wrap{
       position:fixed; right:18px; bottom:18px;
       display:flex; flex-direction:column; gap:10px;
@@ -1210,7 +1194,6 @@
     .toastx.error .ic{ background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.28); }
     .toastx.info .ic{ background: rgba(59,130,246,.14); border-color: rgba(59,130,246,.28); }
 
-    /* Upload area */
     .upload-area{
       border:2px dashed rgba(255,255,255,.12);
       border-radius:16px;
@@ -1225,7 +1208,6 @@
       background:rgba(79,70,229,.06);
     }
 
-    /* CodeMirror overrides */
     .CodeMirror{
       height:60vh;background:rgba(0,0,0,.25) !important;
       color:var(--text) !important;font-size:13px;line-height:1.5;
@@ -1237,14 +1219,12 @@
     .CodeMirror-selected{background:rgba(79,70,229,.25) !important;}
     .CodeMirror-matchingbracket{color:var(--success) !important;border-bottom:1px solid var(--success);}
 
-    /* Custom scrollbar */
     ::-webkit-scrollbar{width:8px;height:8px;}
     ::-webkit-scrollbar-track{background:rgba(255,255,255,.03);border-radius:4px;}
     ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:4px;}
     ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.20);}
     *{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.12) rgba(255,255,255,.03);}
 
-    /* Custom checkbox redesign */
     .checkbox input[type="checkbox"]{
       appearance:none;-webkit-appearance:none;
       width:40px;height:22px;border-radius:999px;
@@ -1264,7 +1244,6 @@
       transform:translateX(18px);
     }
 
-    /* Custom select/dropdown */
     select.inputx{
       appearance:none;-webkit-appearance:none;-moz-appearance:none;
       background-image:
@@ -1292,11 +1271,9 @@
       color:var(--text);
     }
 
-    /* Console heights - full page for main, compact for dashboard */
     #mainConsole{height:calc(100vh - 280px);min-height:300px;}
     #dashboardConsole{height:clamp(320px, 42vh, 520px);}
 
-    /* Console new-messages indicator */
     .console-wrapper{position:relative;}
     .console-new-msgs{
       position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
@@ -1308,7 +1285,6 @@
     }
     .console-new-msgs.visible{display:block;}
 
-    /* File selection toolbar */
     .selection-toolbar{
       display:none;align-items:center;gap:12px;
       padding:10px 14px;margin-bottom:12px;
@@ -1319,15 +1295,12 @@
     .selection-toolbar.visible{display:flex;}
     .selection-count{font-weight:650;font-size:13px;}
 
-    /* File name click-to-edit */
     .file-name-clickable{cursor:pointer;transition:color .12s;}
     .file-name-clickable:hover{color:var(--info);text-decoration:underline;}
 
-    /* Unsaved changes modal */
     .unsaved-modal .modal-body-custom{text-align:center;padding:24px 16px;}
     .unsaved-modal .modal-body-custom i{font-size:32px;color:var(--warning);margin-bottom:12px;}
 
-    /* Resource status badges */
     .res-badge{
       font-size:12px;padding:4px 10px;border-radius:999px;font-weight:600;
     }
@@ -1387,7 +1360,6 @@
       *{ animation:none !important; transition:none !important; }
     }
 
-    /* WebSocket offline overlay */
     body.ws-offline .app{
       filter: blur(6px);
       pointer-events:none;
@@ -1438,12 +1410,12 @@
       <div class="hint">Please wait. Requests are paused.</div>
     </div>
   </div>
-  <!-- Hamburger -->
+  
   <button class="hamburger" id="hamburgerBtn"><i class="fa-solid fa-bars"></i></button>
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
   <div class="app">
-    <!-- Sidebar -->
+    
     <aside class="sidebar" id="sidebar">
       <div class="brand" style="justify-content:center;">
         <img src="/logo.png" alt="HappinessMP" width="270" height="48" style="max-width:100%;height:auto;">
@@ -1479,7 +1451,7 @@
       </div>
     </aside>
 
-    <!-- Main -->
+    
     <main class="main">
       <div class="topbar">
         <div class="status-chip">
@@ -1510,7 +1482,7 @@
         </div>
       </div>
 
-      <!-- Dashboard Page -->
+      
       <section class="page-section active" id="pageDashboard">
         <div class="dash-grid">
           <div class="cardx dash-overview">
@@ -1609,7 +1581,7 @@
         </div>
       </section>
 
-      <!-- Console Page -->
+      
       <section class="page-section" id="pageConsole">
         <div class="cardx">
           <div class="cardx-header">
@@ -1633,7 +1605,7 @@
         </div>
       </section>
 
-      <!-- Files Page -->
+      
       <section class="page-section" id="pageFiles">
         <div class="cardx">
           <div class="cardx-header">
@@ -1672,7 +1644,7 @@
         </div>
       </section>
 
-      <!-- Settings Page -->
+      
       <section class="page-section" id="pageSettings">
         <div class="cardx" style="margin-bottom:14px;">
           <div class="cardx-header">
@@ -1695,7 +1667,7 @@
         </div>
       </section>
 
-      <!-- Logs Page -->
+      
       <section class="page-section" id="pageLogs">
         <div class="cardx">
           <div class="cardx-header">
@@ -1722,7 +1694,7 @@
         </div>
       </section>
 
-      <!-- Players Page -->
+      
       <section class="page-section" id="pagePlayers">
         <div class="cardx" style="margin-bottom:14px;">
           <div class="cardx-header">
@@ -1785,7 +1757,7 @@
         </div>
       </section>
 
-      <!-- Resources Page -->
+      
       <section class="page-section" id="pageResources">
         <div class="cardx" style="margin-bottom:14px;">
           <div class="cardx-header">
@@ -1805,7 +1777,7 @@
         </div>
       </section>
 
-      <!-- Admin Page -->
+      
       <section class="page-section" id="pageAdmin">
         <div class="cardx">
           <div class="cardx-header">
@@ -1838,7 +1810,7 @@
     </main>
   </div>
 
-  <!-- User Settings Modal -->
+  
   <div class="modal-custom" id="profileModal">
     <div class="modal-content-custom profile-modal">
       <div class="modal-header-custom">
@@ -1901,7 +1873,7 @@
     </div>
   </div>
 
-  <!-- Profile Unsaved Modal -->
+  
   <div class="modal-custom unsaved-modal" id="profileUnsavedModal">
     <div class="modal-content-custom" style="width:min(420px,100%);">
       <div class="modal-header-custom">
@@ -1922,7 +1894,7 @@
     </div>
   </div>
 
-  <!-- Confirm Action Modal -->
+  
   <div class="modal-custom confirm-modal" id="confirmActionModal">
     <div class="modal-content-custom" style="width:min(420px,100%);">
       <div class="modal-header-custom">
@@ -1942,7 +1914,7 @@
     </div>
   </div>
 
-  <!-- Create User Modal -->
+  
   <div class="modal-custom" id="createUserModal">
     <div class="modal-content-custom">
       <div class="modal-header-custom">
@@ -1996,7 +1968,7 @@
     </div>
   </div>
 
-  <!-- File Editor Modal -->
+  
   <div class="modal-custom" id="fileEditorModal">
     <div class="modal-content-custom" style="width:min(960px,100%);">
       <div class="modal-header-custom">
@@ -2014,7 +1986,7 @@
     </div>
   </div>
 
-  <!-- Upload Modal -->
+  
   <div class="modal-custom" id="uploadModal">
     <div class="modal-content-custom" style="width:min(560px,100%);">
       <div class="modal-header-custom">
@@ -2034,7 +2006,7 @@
     </div>
   </div>
 
-  <!-- Restart Prompt Modal -->
+  
   <div class="modal-custom" id="restartPromptModal">
     <div class="modal-content-custom" style="width:min(420px,100%);">
       <div class="modal-header-custom">
@@ -2051,7 +2023,7 @@
     </div>
   </div>
 
-  <!-- Unsaved Changes Modal -->
+  
   <div class="modal-custom unsaved-modal" id="unsavedChangesModal">
     <div class="modal-content-custom" style="width:min(420px,100%);">
       <div class="modal-header-custom">
@@ -2072,7 +2044,7 @@
     </div>
   </div>
 
-  <!-- Edit User Modal -->
+  
   <div class="modal-custom" id="editUserModal">
     <div class="modal-content-custom">
       <div class="modal-header-custom">
@@ -2109,7 +2081,7 @@
     </div>
   </div>
 
-  <!-- Input Modal -->
+  
   <div class="modal-custom" id="inputModal">
     <div class="modal-content-custom">
       <div class="modal-header-custom">
@@ -2199,11 +2171,9 @@
     let updateInfo = null;
     let updatePoller = null;
 
-    // Console auto-scroll state
     let mainUserScrolledUp = false;
     let dashUserScrolledUp = false;
 
-    // ===================== CSRF =====================
     async function fetchCsrfToken() {
       try {
         const res = await fetch('/api/csrf-token');
@@ -2212,7 +2182,6 @@
       } catch(e) {}
     }
 
-    // ===================== Localization =====================
     function t(key, fallback) {
       return locale[key] || fallback || key;
     }
@@ -2239,12 +2208,10 @@
         const res = await fetch(`/api/locales/${encodeURIComponent(localeCode)}`);
         if (res.ok) locale = await res.json();
       } catch(e) {}
-      // Apply to all data-i18n elements
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (locale[key]) el.textContent = locale[key];
       });
-      // Apply placeholders
       document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
         const key = el.getAttribute('data-i18n-placeholder');
         if (locale[key]) el.setAttribute('placeholder', locale[key]);
@@ -2255,7 +2222,6 @@
       }
     }
 
-    // ===================== Toast =====================
     function toast(type, title, message){
       const wrap = document.getElementById('toastWrap');
       const el = document.createElement('div');
@@ -2329,7 +2295,6 @@
       }
     }
 
-    // ===================== Input Modal =====================
     let inputModalResolver = null;
     let inputModalConfig = null;
 
@@ -2412,7 +2377,6 @@
       closeInputModal({ field1: v1, field2: v2 });
     }
 
-    // ===================== Confirm Modal =====================
     let confirmModalResolver = null;
     function openConfirmModal(opts){
       return new Promise((resolve) => {
@@ -2441,7 +2405,6 @@
       }
     }
 
-    // ===================== Mobile sidebar =====================
     const hamburgerBtn = document.getElementById('hamburgerBtn');
     const sidebar = document.getElementById('sidebar');
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
@@ -2460,7 +2423,6 @@
       sidebarBackdrop.classList.remove('open');
     }
 
-    // ===================== Navigation =====================
     const pageMap = {
       'dashboard': 'pageDashboard',
       'console': 'pageConsole',
@@ -2473,7 +2435,6 @@
     };
 
     function switchPage(pageId){
-      // Check for unsaved settings changes
       if(currentPage === 'settings' && (settingsDirty || panelConfigDirty)){
         pendingNavTarget = pageId;
         document.getElementById('unsavedChangesModal').classList.add('active');
@@ -2497,7 +2458,6 @@
 
       closeSidebar();
 
-      // Page hooks
       if(pageId === 'files') loadFiles();
       if(pageId === 'admin') loadUsers();
       if(pageId === 'console') setTimeout(scrollConsoleToBottom, 50);
@@ -2511,7 +2471,6 @@
       el.addEventListener('click', ()=> switchPage(el.getAttribute('data-page')));
     });
 
-    // ===================== Socket =====================
     socket.on('console_update', (data) => addConsoleLine(data.line));
     socket.on('console_history', (data) => updateConsole(data.lines));
     socket.on('server_status', (data) => updateStatusIndicator(!!data.running));
@@ -2523,7 +2482,6 @@
     });
     socket.on('update_status', (data) => applyUpdateState(data));
 
-    // ===================== Console UI =====================
     function stripAnsi(str) {
       return str.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]|\].*?(?:\x1B\\|\x07)|[()#][A-Z0-9])|\x1B\[[\d;]*m|\x1B\[\d*[A-HJKSTfn]/g, '').replace(/\[(\d*)m/g, '');
     }
@@ -2535,7 +2493,6 @@
     }
 
     function parseAnsi(str) {
-      // ANSI color map - blue as primary, red for errors
       const colorMap = {
         '30': '#888',      // black -> gray
         '31': '#f87171',   // red (errors)
@@ -2554,7 +2511,6 @@
       let result = '';
       let currentColor = null;
 
-      // Match [32m style codes (with or without ESC)
       const ansiRegex = /(?:\x1B)?\[(\d*)m/g;
       let lastIndex = 0;
       let match;
@@ -2650,7 +2606,6 @@
       return el.scrollHeight - el.scrollTop - el.clientHeight < 30;
     }
 
-    // Set up scroll listeners for auto-scroll tracking
     (function(){
       const main = document.getElementById('mainConsole');
       const dash = document.getElementById('dashboardConsole');
@@ -2714,7 +2669,6 @@
       trimConsole(main, 1200);
       trimConsole(dash, 300);
 
-      // Only auto-scroll if user hasn't scrolled up
       if(!mainUserScrolledUp) {
         main.scrollTop = main.scrollHeight;
       } else {
@@ -2746,7 +2700,6 @@
       }
     }
 
-    // ===================== Status / Server control =====================
     function setMiniBadge(el, on, onLabel, offLabel){
       if(!el) return;
       el.textContent = on ? onLabel : offLabel;
@@ -2856,7 +2809,6 @@
       fetchStatus();
     }
 
-    // ===================== Command =====================
     async function sendCommand(){
       const input = document.getElementById('commandInput');
       const cmd = (input.value || '').trim();
@@ -2866,7 +2818,6 @@
       else toast('error', t('label_command','Command'), res.message || t('toast_command_failed'));
     }
 
-    // ===================== Files =====================
     function buildBreadcrumbs(path) {
       const bc = document.getElementById('fileBreadcrumbs');
       bc.innerHTML = '';
@@ -2936,7 +2887,6 @@
         body.innerHTML = '';
         const files = data.files || [];
 
-        // Add ".." entry if not at root
         if (currentFilePath) {
           const tr = document.createElement('tr');
           tr.className = 'file-row';
@@ -2955,7 +2905,6 @@
           return;
         }
 
-        // Sort: folders first, then files
         files.sort((a, b) => {
           if (a.is_dir && !b.is_dir) return -1;
           if (!a.is_dir && b.is_dir) return 1;
@@ -2997,7 +2946,6 @@
             <td>${actionsHtml}</td>
           `;
 
-          // Click on name cell
           const nameCell = tr.querySelector('.file-name-cell');
           if (f.is_dir) {
             nameCell.style.cursor = 'pointer';
@@ -3006,14 +2954,12 @@
               loadFiles();
             });
           } else {
-            // Click filename to edit for files
             nameCell.addEventListener('click', () => openFileEditor(fpath));
           }
 
           body.appendChild(tr);
         });
 
-        // Wire action buttons
         body.querySelectorAll('button[data-act]').forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -3029,7 +2975,6 @@
           });
         });
 
-        // Wire file checkboxes
         body.querySelectorAll('.file-select-cb').forEach(cb => {
           cb.addEventListener('change', () => {
             const p = cb.getAttribute('data-path');
@@ -3070,7 +3015,6 @@
         const fileName = path.split('/').pop();
         document.getElementById('editorFileName').textContent = fileName;
 
-        // Destroy old CM instance if exists
         if (cmEditor) {
           cmEditor.toTextArea();
           cmEditor = null;
@@ -3085,7 +3029,6 @@
 
         document.getElementById('fileEditorModal').classList.add('active');
 
-        // Initialize CodeMirror
         setTimeout(() => {
           try {
             cmEditor = CodeMirror.fromTextArea(textarea, {
@@ -3101,7 +3044,6 @@
             });
             cmEditor.setSize('100%', '60vh');
           } catch(e) {
-            // Fallback to textarea if CodeMirror fails to load
             textarea.style.display = '';
             textarea.style.width = '100%';
             textarea.style.height = '60vh';
@@ -3212,7 +3154,6 @@
       });
     }
 
-    // Upload
     function openUploadModal() {
       document.getElementById('uploadModal').classList.add('active');
       document.getElementById('uploadProgress').style.display = 'none';
@@ -3255,7 +3196,6 @@
       uploadInput.value = '';
     }
 
-    // ===================== Settings =====================
     let settingsData = null;
     let secretState = {
       settings: { unlocked: false, password: null, edited: false },
@@ -3455,14 +3395,12 @@
         <div class="settings-section-title">${t('settings_section_network','Network & Identity')}</div>
         <div class="settings-section-body">`;
 
-      // hostname
       html += `<div class="form-group">
         <label class="form-label">${t('settings_hostname','Hostname')}</label>
         <input class="inputx" id="set_hostname" value="${escapeHtml(data.hostname || '')}" />
         <div class="form-hint">${t('settings_hostname_hint')}</div>
       </div>`;
 
-      // hostaddress
       html += `<div class="warn-banner"><i class="fa-solid fa-triangle-exclamation"></i> ${t('settings_hostaddress_warning')}</div>`;
       html += `<div class="form-group">
         <label class="form-label">${t('settings_hostaddress','Host Address')}</label>
@@ -3470,7 +3408,6 @@
         <div class="form-hint">${t('settings_hostaddress_hint')}</div>
       </div>`;
 
-      // listed
       html += `<div class="form-group">
         <label class="form-label">${t('settings_listed','Listed')}</label>
         <div class="toggle-wrap" data-toggle="set_listed">
@@ -3479,7 +3416,6 @@
         </div>
       </div>`;
 
-      // port
       html += `<div class="form-group">
         <label class="form-label">${t('settings_port','Port')}</label>
         <input class="inputx" type="number" id="set_port" value="${data.port || 1337}" min="1" max="65535" />
@@ -3492,14 +3428,12 @@
         <div class="settings-section-title">${t('settings_section_gameplay','Gameplay & Logs')}</div>
         <div class="settings-section-body">`;
 
-      // maxplayers
       html += `<div class="form-group">
         <label class="form-label">${t('settings_maxplayers','Max Players')}</label>
         <input class="inputx" type="number" id="set_maxplayers" value="${data.maxplayers || 32}" min="1" max="100" />
         <div class="form-hint">${t('settings_maxplayers_hint')}</div>
       </div>`;
 
-      // episode
       const episodeVal = parseInt(data.episode) || 0;
       html += `<div class="form-group">
         <label class="form-label">${t('settings_episode','Episode')}</label>
@@ -3511,7 +3445,6 @@
         <div class="form-hint">${t('settings_episode_hint')}</div>
       </div>`;
 
-      // loglevel
       const loglevelVal = parseInt(data.loglevel) || 0;
       const loglevels = [
         {v:0,l:t('loglevel_trace','Trace')},
@@ -3530,7 +3463,6 @@
         <div class="form-hint">${t('settings_loglevel_hint')}</div>
       </div>`;
 
-      // chat
       html += `<div class="form-group">
         <label class="form-label">${t('settings_chat','Chat')}</label>
         <div class="toggle-wrap" data-toggle="set_chat">
@@ -3547,7 +3479,6 @@
         <div class="settings-section-title">${t('settings_section_security','Security')}</div>
         <div class="settings-section-body">`;
 
-      // secret (locked by default)
       const settingsSecretPlaceholder = data.secret_set ? '********' : '';
       html += `<div class="form-group">
         <label class="form-label">${t('settings_secret','Secret')}</label>
@@ -3569,7 +3500,6 @@
         <div class="settings-section-title">${t('settings_section_resources','Resources')}</div>
         <div class="settings-section-body">`;
 
-      // resources
       const resources = data.resources || [];
       html += `<div class="form-group">
         <label class="form-label">${t('settings_resources','Resources')}</label>
@@ -3598,7 +3528,6 @@
         hasSecret: !!data.secret_set
       });
 
-      // Wire toggles
       container.querySelectorAll('.toggle-wrap[data-toggle]').forEach(wrap => {
         wrap.addEventListener('click', () => {
           const toggle = wrap.querySelector('.toggle');
@@ -3606,20 +3535,17 @@
         });
       });
 
-      // Wire resource tag removal
       container.querySelectorAll('.tag-remove[data-res]').forEach(btn => {
         btn.addEventListener('click', () => {
           btn.closest('.tag').remove();
         });
       });
 
-      // Wire add resource
       document.getElementById('btnAddResource').addEventListener('click', () => { addResource(); settingsDirty = true; });
       document.getElementById('newResourceInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { addResource(); settingsDirty = true; }
       });
 
-      // Track dirty state for settings
       container.querySelectorAll('input, select').forEach(el => {
         el.addEventListener('input', () => { settingsDirty = true; });
         el.addEventListener('change', () => { settingsDirty = true; });
@@ -3667,7 +3593,6 @@
         data.secret = secretVal;
         data.admin_password = secretState.settings.password;
       }
-      // Collect resources
       document.querySelectorAll('#resourceTags .tag').forEach(tag => {
         const text = tag.textContent.trim().replace(/\s*$/, '');
         if (text) data.resources.push(text);
@@ -3680,7 +3605,6 @@
         if(secretState.settings && secretState.settings.edited){
           lockSecret('settings', true);
         }
-        // Show restart prompt if server is running
         if (serverRunning) {
           document.getElementById('restartPromptModal').classList.add('active');
         }
@@ -3689,7 +3613,6 @@
       }
     }
 
-    // ===================== Panel Config =====================
     async function loadPanelConfig() {
       const form = document.getElementById('panelConfigForm');
       form.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('loading_panel_config','Loading panel config...')}</div>`;
@@ -3720,14 +3643,12 @@
         <div class="settings-section-title">${t('panel_section_general','General')}</div>
         <div class="settings-section-body">`;
 
-      // Panel name
       html += `<div class="form-group">
         <label class="form-label">${t('panel_name','Panel Name')}</label>
         <input class="inputx" id="pc_panel_name" value="${escapeHtml(data.panel_name || t('brand_name','HappinessMP'))}" />
         <div class="form-hint">${t('panel_name_hint')}</div>
       </div>`;
 
-      // Locale
       html += `<div class="form-group">
         <label class="form-label">${t('panel_locale','Language')}</label>
         <select class="inputx" id="pc_locale">
@@ -3745,7 +3666,6 @@
         <div class="settings-section-title">${t('panel_section_security','Security')}</div>
         <div class="settings-section-body">`;
 
-      // Panel secret (locked by default)
       const panelSecretPlaceholder = data.panel_secret_set ? '********' : '';
       html += `<div class="form-group">
         <label class="form-label">${t('panel_secret_label','Panel Secret')}</label>
@@ -3767,7 +3687,6 @@
         <div class="settings-section-title">${t('panel_section_automation','Automation')}</div>
         <div class="settings-section-body">`;
 
-      // Auto start
       html += `<div class="form-group">
         <label class="form-label">${t('panel_auto_start','Auto Start')}</label>
         <div class="toggle-wrap" data-toggle="pc_auto_start">
@@ -3776,7 +3695,6 @@
         </div>
       </div>`;
 
-      // Scheduled restarts
       const times = data.scheduled_restarts || [];
       html += `<div class="form-group">
         <label class="form-label">${t('panel_scheduled_restarts','Scheduled Restarts')}</label>
@@ -3805,7 +3723,6 @@
         hasSecret: !!data.panel_secret_set
       });
 
-      // Wire toggles
       container.querySelectorAll('.toggle-wrap[data-toggle]').forEach(wrap => {
         wrap.addEventListener('click', () => {
           const toggle = wrap.querySelector('.toggle');
@@ -3813,18 +3730,15 @@
         });
       });
 
-      // Wire tag removal
       container.querySelectorAll('.tag-remove').forEach(btn => {
         btn.addEventListener('click', () => btn.closest('.tag').remove());
       });
 
-      // Wire add scheduled restart
       document.getElementById('btnAddSchedRestart').addEventListener('click', () => { addSchedRestart(); panelConfigDirty = true; });
       document.getElementById('newSchedInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { addSchedRestart(); panelConfigDirty = true; }
       });
 
-      // Track dirty state for panel config
       container.querySelectorAll('input, select').forEach(el => {
         el.addEventListener('input', () => { panelConfigDirty = true; });
         el.addEventListener('change', () => { panelConfigDirty = true; });
@@ -3886,7 +3800,6 @@
       }
     }
 
-    // ===================== Logs =====================
     function normalizeLogsData(raw) {
       const out = {};
       Object.keys(raw || {}).forEach(u => {
@@ -4069,7 +3982,6 @@
       return '';
     }
 
-    // ===================== Admin: Users =====================
     async function loadUsers(opts = {}){
       if(!opts.noFade){
         return refreshWithFade('usersList', () => loadUsers({ noFade: true }));
@@ -4200,7 +4112,6 @@
       }
     }
 
-    // Create user modal
     function openCreateUserModal(){
       document.getElementById('createUserModal').classList.add('active');
       document.getElementById('generatedPasswordContainer').style.display = 'none';
@@ -4264,7 +4175,6 @@
         btn.classList.add('success');
         loadUsers();
 
-        // Keep modal open so admin can copy password - clicking Done closes
         btn.onclick = () => {
           closeCreateUserModal();
           btn.disabled = false;
@@ -4281,7 +4191,6 @@
       }
     }
 
-    // ===================== Current user / permissions =====================
     async function loadCurrentUser(){
       try{
         const res = await fetch('/api/current-user');
@@ -4304,7 +4213,6 @@
           const enabled = Object.keys(p).filter(k => p[k] === true).length;
           document.getElementById('permPill').textContent = `${t('perm_label','Perms')}: ${enabled}`;
 
-          // Show resources/settings nav for users with permission
           if(p.can_manage_resources) document.getElementById('resourcesNav').style.display = '';
           if(p.can_view_settings) document.getElementById('settingsNav').style.display = '';
         }
@@ -4332,7 +4240,6 @@
       }
     }
 
-    // ===================== Updates =====================
     async function fetchUpdateStatus(){
       try{
         const res = await fetch('/api/update-status');
@@ -4427,7 +4334,6 @@
       }
     }
 
-    // ===================== User Profile =====================
     async function openProfileModal(){
       document.getElementById('profileModal').classList.add('active');
       await loadProfileModalData();
@@ -4571,7 +4477,6 @@
       }
     }
 
-    // ===================== Resources =====================
     async function loadResources(opts = {}) {
       if(!opts.noFade){
         return refreshWithFade('resourcesList', () => loadResources({ noFade: true }));
@@ -4628,7 +4533,6 @@
           `;
           body.appendChild(card);
         });
-        // Wire resource action buttons
         body.querySelectorAll('button[data-res-act]').forEach(btn => {
           btn.addEventListener('click', async () => {
             const act = btn.getAttribute('data-res-act');
@@ -4664,7 +4568,6 @@
       }
     }
 
-    // ===================== Players =====================
     async function loadPlayers(opts = {}) {
       if(!opts.noFade){
         return refreshWithFade('playersList', () => loadPlayers({ noFade: true }));
@@ -4716,7 +4619,6 @@
           body.appendChild(tr);
         });
 
-        // Wire player action buttons
         body.querySelectorAll('button[data-player-act]').forEach(btn => {
           btn.addEventListener('click', async () => {
             const act = btn.getAttribute('data-player-act');
@@ -4889,21 +4791,17 @@
       else toast('error', t('label_broadcast','Broadcast'), out.message || t('error_failed','Failed'));
     }
 
-    // Real-time player updates from socket
     socket.on('players_update', (data) => {
       const players = data.players || [];
-      // Always update dashboard player count
       const countEl = document.getElementById('playerCount');
       if(countEl) countEl.textContent = players.length;
       const badgeEl = document.getElementById('playerCountBadge');
       if(badgeEl) badgeEl.textContent = players.length;
-      // Refresh players table if on that page
       if(currentPage === 'players') {
         loadPlayers();
       }
     });
 
-    // ===================== Edit User Modal =====================
     let editingUsername = '';
     function openEditUserModal(username, userData) {
       editingUsername = username;
@@ -4946,7 +4844,6 @@
       }
     }
 
-    // ===================== Bulk Zip Download =====================
     async function bulkZipDownload() {
       if(selectedFiles.size === 0) return;
       try {
@@ -4973,14 +4870,12 @@
       }
     }
 
-    // ===================== Copy Password =====================
     function copyPassword() {
       const pw = document.getElementById('generatedPassword').value;
       if(!pw) return;
       navigator.clipboard.writeText(pw).then(() => {
         toast('success', t('label_password','Password'), t('toast_password_copied','Password copied to clipboard'));
       }).catch(() => {
-        // Fallback: select and try execCommand
         const el = document.getElementById('generatedPassword');
         el.select();
         document.execCommand('copy');
@@ -4988,7 +4883,6 @@
       });
     }
 
-    // ===================== Logout =====================
     async function logout(){
       try{
         await fetch('/api/logout', {
@@ -4999,7 +4893,6 @@
       window.location.href = '/login';
     }
 
-    // ===================== Utils =====================
     function formatUptime(seconds){
       seconds = Math.max(0, parseInt(seconds || 0, 10));
       const d = Math.floor(seconds / 86400); seconds %= 86400;
@@ -5027,7 +4920,6 @@
       return d.toLocaleString();
     }
 
-    // ===================== Wire buttons =====================
     document.getElementById('btnStart').addEventListener('click', startServer);
     document.getElementById('btnStop').addEventListener('click', stopServer);
     document.getElementById('btnRestart').addEventListener('click', restartServer);
@@ -5061,12 +4953,10 @@
 
     document.getElementById('btnCloseUpload').addEventListener('click', ()=> document.getElementById('uploadModal').classList.remove('active'));
 
-    // Input modal
     document.getElementById('btnCloseInputModal').addEventListener('click', ()=> closeInputModal(null));
     document.getElementById('btnCancelInputModal').addEventListener('click', ()=> closeInputModal(null));
     document.getElementById('btnSubmitInputModal').addEventListener('click', submitInputModal);
 
-    // Confirm modal
     document.getElementById('btnCloseConfirmAction').addEventListener('click', ()=> closeConfirmModal(false));
     document.getElementById('btnConfirmActionCancel').addEventListener('click', ()=> closeConfirmModal(false));
     document.getElementById('btnConfirmActionAccept').addEventListener('click', ()=> closeConfirmModal(true));
@@ -5081,26 +4971,21 @@
     const btnRefreshLogs = document.getElementById('btnRefreshLogs');
     btnRefreshLogs.addEventListener('click', () => runWithLoading(btnRefreshLogs, () => loadLogsIndex(true)));
 
-    // Copy password
     document.getElementById('btnCopyPassword').addEventListener('click', copyPassword);
 
-    // Resources
     const btnRefreshResources = document.getElementById('btnRefreshResources');
     btnRefreshResources.addEventListener('click', () => runWithLoading(btnRefreshResources, loadResources));
 
-    // Players
     const btnRefreshPlayers = document.getElementById('btnRefreshPlayers');
     btnRefreshPlayers.addEventListener('click', () => runWithLoading(btnRefreshPlayers, loadPlayers));
     const btnRefreshBans = document.getElementById('btnRefreshBans');
     btnRefreshBans.addEventListener('click', () => runWithLoading(btnRefreshBans, loadBans));
     document.getElementById('btnBroadcast').addEventListener('click', broadcastMessage);
 
-    // Edit user modal
     document.getElementById('btnCloseEditUser').addEventListener('click', ()=> document.getElementById('editUserModal').classList.remove('active'));
     document.getElementById('btnCancelEditUser').addEventListener('click', ()=> document.getElementById('editUserModal').classList.remove('active'));
     document.getElementById('btnSaveEditUser').addEventListener('click', saveEditUser);
 
-    // Unsaved changes modal
     document.getElementById('btnCloseUnsaved').addEventListener('click', ()=> {
       document.getElementById('unsavedChangesModal').classList.remove('active');
       pendingNavTarget = null;
@@ -5124,7 +5009,6 @@
       pendingNavTarget = null;
     });
 
-    // Profile unsaved modal
     document.getElementById('btnCloseProfileUnsaved').addEventListener('click', ()=> {
       document.getElementById('profileUnsavedModal').classList.remove('active');
     });
@@ -5142,7 +5026,6 @@
       if(!profileDirty) closeProfileModal();
     });
 
-    // File selection
     document.getElementById('selectAllFiles').addEventListener('change', (e) => {
       const checked = e.target.checked;
       document.querySelectorAll('.file-select-cb').forEach(cb => {
@@ -5161,7 +5044,6 @@
       updateFileSelectionUI();
     });
 
-    // Close modals on backdrop click
     document.querySelectorAll('.modal-custom').forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -5173,7 +5055,6 @@
       });
     });
 
-    // Disable cmd bar if no perms
     function applyCmdPerms(){
       if(!currentUser) return;
       if(currentUser.role === 'admin') return;
@@ -5183,7 +5064,6 @@
       document.getElementById('cmdHint').textContent = allowed ? '' : t('console_no_perm');
     }
 
-    // Close editor modal - cleanup CodeMirror
     document.getElementById('btnCloseEditor').addEventListener('click', ()=> {
       document.getElementById('fileEditorModal').classList.remove('active');
       if(cmEditor){ cmEditor.toTextArea(); cmEditor = null; }
@@ -5193,7 +5073,6 @@
       if(cmEditor){ cmEditor.toTextArea(); cmEditor = null; }
     });
 
-    // User settings modal
     document.getElementById('btnUserSettings').addEventListener('click', openProfileModal);
     document.getElementById('btnCloseProfile').addEventListener('click', attemptCloseProfileModal);
     document.getElementById('btnCancelProfile').addEventListener('click', attemptCloseProfileModal);
@@ -5238,11 +5117,9 @@
       avatarUploadInput.value = '';
     });
 
-    // Update banner action
     const updateBtn = document.getElementById('btnUpdateNow');
     if(updateBtn) updateBtn.addEventListener('click', startUpdate);
 
-    // ===================== Init =====================
     (async function init(){
       await fetchCsrfToken();
       await loadLocale();

@@ -1,14 +1,13 @@
-#!/usr/bin/env python3
 """
 HappinessMP Server Manager - Pterodactyl Style
 Multi-user server control panel for GTA IV with authentication
 """
 
-# WORKAROUND: Fix Flask 'partitioned' cookie issue with Python 3.13+
+                                                                    
 try:
     import flask_patch
 except ImportError:
-    pass  # Patch not available, continue anyway
+    pass                                        
 
 import os
 import sys
@@ -45,15 +44,15 @@ import storage
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(32)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB upload limit
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024                      
 socketio = SocketIO(app)
 
-# ==================== RATE LIMITING ====================
-_login_attempts = {}  # ip -> {'count': int, 'locked_until': float}
+                                                         
+_login_attempts = {}                                               
 RATE_LIMIT_MAX_ATTEMPTS = 5
-RATE_LIMIT_LOCK_SECONDS = 300  # 5 minutes
+RATE_LIMIT_LOCK_SECONDS = 300             
 
-# Paths
+       
 DATA_DIR = Path('./data')
 CONFIG_FILE = DATA_DIR / 'config.json'
 PANEL_CONFIG_FILE = Path('./panel_config.json')
@@ -63,12 +62,12 @@ PID_FILE = DATA_DIR / 'server.pid'
 PFP_DIR = Path('./templates/pfp')
 PFP_ALLOWED_EXTS = {'.png', '.jpg', '.jpeg', '.svg', '.webp'}
 
-# Create directories
+                    
 DATA_DIR.mkdir(exist_ok=True)
 LOGS_DIR.mkdir(exist_ok=True)
 LOCALES_DIR.mkdir(exist_ok=True)
 
-# Server state
+              
 server_state = {
     'running': False,
     'pid': None,
@@ -84,18 +83,18 @@ server_process = None
 console_lines = []
 MAX_CONSOLE_LINES = 1000
 
-# Resource state tracking: name -> 'started' | 'stopped' | 'unknown'
+                                                                    
 resource_states = {}
 
-# Player tracking (synced from panel-connector resource)
-connected_players = {}  # serverId -> {name, ping, ip, session, sessionActive, joinTime}
-pending_actions = []  # Actions for the resource to pick up: [{type, serverId, reason, ...}]
+                                                        
+connected_players = {}                                                                  
+pending_actions = []                                                                        
 
-# Ban file
+          
 BANS_FILE = DATA_DIR / 'bans.json'
 
-# Setup state tracking
-SETUP_SERVER_ZIP_URL = 'https://happinessmp.net/files/HappinessMP%20Server%201.8.7%20Linux.zip'
+                      
+SETUP_SERVER_ZIP_URL = 'https://happinessmp.net/files/HappinessMP%20Server%201.9%20Linux.zip'
 SETUP_CONNECTOR_API_URL = 'https://api.github.com/repos/zuraxscripts/hpm-connector/releases/latest'
 SETUP_DOWNLOAD_DIR = DATA_DIR / 'downloads'
 PANEL_DEFAULT_HOST = 'http://127.0.0.1:20000'
@@ -170,8 +169,8 @@ def _announce_setup_pin(pin: str):
     print(message)
     add_console_line(message)
 
-# ==================== UPDATE CONFIG ====================
-# Legacy local files (kept for one-time migration if present).
+                                                         
+                                                              
 PANEL_VERSION_FILE = Path('./panel_version.json')
 HAPPINESS_UPDATE_FILE = Path('./happiness_update.json')
 UPDATE_CONFIG_FILE = Path('./update_config.json')
@@ -272,7 +271,7 @@ def is_player_banned(ip=None, name=None):
     return False, None
 
 
-# ==================== CSRF PROTECTION ====================
+                                                           
 
 def generate_csrf_token():
     """Generate or retrieve CSRF token for current session."""
@@ -292,7 +291,7 @@ def validate_csrf_token():
 def csrf_protect():
     """Check CSRF token on state-changing requests."""
     if request.method in ('POST', 'PUT', 'DELETE'):
-        # Skip CSRF for login/setup (no session yet), socket.io, and panel hooks
+                                                                                
         if request.path in ('/api/login', '/api/setup', '/api/setup-pin', '/api/db-test') or request.path.startswith('/socket.io') or request.path.startswith('/api/panel-hook/'):
             return
         if not validate_csrf_token():
@@ -319,7 +318,7 @@ def api_csrf_token():
     """Return a CSRF token for the current session."""
     return jsonify({'token': generate_csrf_token()})
 
-# ==================== PANEL CONFIG ====================
+                                                        
 
 def load_panel_config():
     """Load panel-level configuration."""
@@ -333,7 +332,7 @@ def save_panel_config(cfg):
 
 panel_config = load_panel_config()
 
-# ==================== PERMISSIONS ====================
+                                                       
 
 def get_current_user():
     """Get current user data from session."""
@@ -353,18 +352,18 @@ def require_permission(permission_key: str):
             _, user = get_current_user()
             if not user:
                 return jsonify({'error': 'User not found'}), 404
-            # Admins bypass all permission checks
+                                                 
             if user.get('role') == 'admin':
                 return f(*args, **kwargs)
             perms = user.get('permissions', {})
-            # Deny by default if permission key is missing
+                                                          
             if not perms.get(permission_key, False):
                 return jsonify({'error': 'Permission denied'}), 403
             return f(*args, **kwargs)
         return decorated_function
     return decorator
 
-# ==================== USER MANAGEMENT ====================
+                                                           
 
 def init_users():
     """Initialize users database"""
@@ -447,10 +446,10 @@ def create_user(username, password, role='user', force_password_change=True, per
     if username in users:
         return False, "User already exists"
 
-    # Default permissions
+                         
     if permissions is None:
         if role == 'admin':
-            # Admin gets all permissions
+                                        
             permissions = {
                 'can_view_dashboard': True,
                 'can_control_server': True,
@@ -491,7 +490,7 @@ def create_user(username, password, role='user', force_password_change=True, per
 
     save_users(users)
 
-    # Create user's log directory
+                                 
     user_log_dir = LOGS_DIR / username
     user_log_dir.mkdir(exist_ok=True)
 
@@ -522,7 +521,7 @@ def authenticate_user(username, password):
         return False, None
 
     if check_password_hash(user['password'], password):
-        # Update last login
+                           
         users[username]['last_login'] = datetime.now().isoformat()
         save_users(users)
         return True, user
@@ -538,7 +537,7 @@ def setup_required():
         add_console_line(f'ERROR: Failed to load users (DB?): {e}')
         return False
 
-# ==================== DECORATORS ====================
+                                                      
 
 def login_required(f):
     """Require user to be logged in"""
@@ -563,7 +562,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# ==================== LOGGING ====================
+                                                   
 
 def log_user_action(username, action, details=""):
     """Log user action"""
@@ -583,7 +582,7 @@ def add_console_line(line, username=None):
     global console_lines
     timestamp = datetime.now().strftime('%H:%M:%S')
 
-    # Remove ANSI escape sequences (comprehensive pattern)
+                                                          
     ansi_escape = re.compile(r'''
         \x1B          # ESC character
         (?:
@@ -598,7 +597,7 @@ def add_console_line(line, username=None):
     ''', re.VERBOSE)
     clean_line = ansi_escape.sub('', line)
 
-    # Strip duplicated/embedded timestamps from server output (keeps our own timestamp)
+                                                                                       
     clean_line = clean_line.strip('\r\n')
     clean_line = re.sub(r'^(\[\d{2}:\d{2}:\d{2}\]\s*){1,3}', '', clean_line).lstrip()
 
@@ -610,11 +609,11 @@ def add_console_line(line, username=None):
 
     socketio.emit('console_update', {'line': formatted_line})
 
-    # Log to user's file if specified
+                                     
     if username:
         log_user_action(username, 'CONSOLE', clean_line)
 
-# ==================== SERVER MANAGEMENT ====================
+                                                             
 
 def load_config():
     """Load server configuration"""
@@ -636,7 +635,7 @@ if db.is_configured():
 
 config = load_config()
 
-# ==================== PATH JAILING ====================
+                                                        
 
 def get_server_dir():
     """Get the server root directory (parent of the executable)."""
@@ -648,13 +647,13 @@ def jail_path(requested_path):
     """Resolve a user-requested path within the server directory jail.
     Returns (abs_path, error_message). error_message is None on success."""
     server_dir = get_server_dir()
-    # Normalize separators
+                          
     requested_path = requested_path.replace('\\', '/')
-    # Remove leading slashes
+                            
     while requested_path.startswith('/'):
         requested_path = requested_path[1:]
     abs_path = os.path.normpath(os.path.join(server_dir, requested_path))
-    # Security: ensure the resolved path is within the server directory
+                                                                       
     if not abs_path.startswith(server_dir):
         return None, 'Access denied: path outside server directory'
     return abs_path, None
@@ -713,7 +712,7 @@ def start_server(username):
         try:
             os.chmod(server_path, 0o755)
         except Exception:
-            pass  # May fail on Windows, that's fine
+            pass                                    
 
         server_process = subprocess.Popen(
             [server_path],
@@ -728,7 +727,7 @@ def start_server(username):
         server_state['start_time'] = time.time()
         server_state['attached'] = False
 
-        # Initialize resource states from settings.xml
+                                                      
         settings = parse_settings_xml()
         configured_resources = settings.get('resources', []) if settings else []
         resource_states = {}
@@ -831,7 +830,7 @@ def monitor_process():
                 continue
             try:
                 decoded_line = line.decode('utf-8', errors='replace').rstrip('\r\n')
-                # Replace any remaining control characters that can break UI
+                                                                            
                 decoded_line = ''.join(ch for ch in decoded_line if ch == '\t' or ch == '\n' or ch == '\r' or (ord(ch) >= 32 and ord(ch) != 127))
                 add_console_line(decoded_line)
             except Exception:
@@ -881,7 +880,7 @@ def update_stats():
 
         time.sleep(2)
 
-# ==================== SCHEDULED RESTARTS ====================
+                                                              
 
 _last_scheduled_restart_minute = None
 
@@ -904,7 +903,7 @@ def scheduled_restart_thread():
             pass
         time.sleep(30)
 
-# ==================== SETTINGS XML ====================
+                                                        
 
 def get_settings_xml_path():
     """Get path to settings.xml relative to server directory."""
@@ -923,7 +922,7 @@ def parse_settings_xml():
         for child in root:
             tag = child.tag
             text = (child.text or '').strip()
-            # Handle resources as a list
+                                        
             if tag == 'resource':
                 result.setdefault('resources', []).append(text)
             elif tag in ('listed', 'chat'):
@@ -956,7 +955,7 @@ def write_settings_xml(data):
             else:
                 el.text = str(val)
 
-    # Resources
+               
     for res in data.get('resources', []):
         el = ET.SubElement(root, 'resource')
         el.text = str(res).strip()
@@ -965,7 +964,7 @@ def write_settings_xml(data):
     ET.indent(tree, space='  ')
     tree.write(path, encoding='unicode', xml_declaration=True)
 
-# ==================== SETUP HELPERS ====================
+                                                         
 
 def _download_with_progress(url: str, dest_path: Path, start_pct: int, end_pct: int, label: str):
     dest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1086,7 +1085,7 @@ def install_hpm_connector():
     with zipfile.ZipFile(zip_path, 'r') as zf:
         zf.extractall(extract_dir)
 
-    # GitHub zipball has a single top-level directory
+                                                     
     top_dirs = [p for p in extract_dir.iterdir() if p.is_dir()]
     source_dir = top_dirs[0] if top_dirs else extract_dir
 
@@ -1133,12 +1132,12 @@ def update_connector_config(panel_secret: str, panel_host: str = None):
     server_lua.write_text(text, encoding='utf-8')
     _setup_update(message='hpm-connector server.lua updated with panel secret')
 
-# ==================== UPDATE HELPERS ====================
+                                                          
 
 def _safe_json_load(path: Path, default):
     try:
         if path.exists():
-            # Handle UTF-8 BOM if present (common on Windows-edited JSON).
+                                                                          
             with open(path, 'r', encoding='utf-8-sig') as f:
                 return json.load(f)
     except Exception:
@@ -1159,7 +1158,7 @@ def _load_update_config():
         'happiness_update_url': DEFAULT_HAPPINESS_UPDATE_URL,
         'check_interval_minutes': DEFAULT_UPDATE_INTERVAL_MINUTES
     }
-    # Remote defaults (allows central JSON config without local files).
+                                                                       
     update_cfg_url = os.getenv('HPM_UPDATE_CONFIG_URL')
     if update_cfg_url is None:
         update_cfg_url = DEFAULT_UPDATE_CONFIG_URL
@@ -1171,12 +1170,12 @@ def _load_update_config():
         except Exception:
             pass
 
-    # Optional local override (legacy)
+                                      
     data = _safe_json_load(UPDATE_CONFIG_FILE, {})
     if isinstance(data, dict):
         defaults.update({k: v for k, v in data.items() if v is not None})
 
-    # Optional panel config override
+                                    
     try:
         cfg = storage.load_panel_config()
     except Exception:
@@ -1186,7 +1185,7 @@ def _load_update_config():
             if cfg.get(key) is not None:
                 defaults[key] = cfg.get(key)
 
-    # Optional env overrides
+                            
     repo_env = os.getenv('HPM_PANEL_REPO')
     if repo_env:
         defaults['panel_repo'] = repo_env.strip()
@@ -1250,7 +1249,7 @@ def _load_happiness_local_info():
                     pass
 
     if not version:
-        # Best-effort: infer version from the last known zip URL.
+                                                                 
         guess = _guess_version_from_url(zip_url or defaults['zip_url'])
         if guess:
             version = guess
@@ -1430,7 +1429,7 @@ def _update_check_loop():
             interval_min = DEFAULT_UPDATE_INTERVAL_MINUTES
         time.sleep(interval_min * 60)
 
-# ==================== ROUTES - AUTH ====================
+                                                         
 
 @app.route('/')
 def index():
@@ -1441,7 +1440,7 @@ def index():
     if 'username' not in session:
         return redirect(url_for('login'))
 
-    # Check if password change required
+                                       
     user = get_user(session['username'])
     if user and user.get('force_password_change'):
         return redirect(url_for('change_password'))
@@ -1490,7 +1489,7 @@ def change_password():
 
     return send_from_directory('.', 'templates/change_password.html')
 
-# ==================== API - AUTH ====================
+                                                      
 
 @app.route('/api/setup-pin', methods=['POST'])
 def api_setup_pin():
@@ -1571,7 +1570,7 @@ def api_setup():
             _setup_update(step='Database', progress=15, message='Migrating existing JSON data')
             storage.migrate_json_to_db(force=False)
 
-            # Reload configs from DB now that it is configured
+                                                              
             config = storage.load_config()
             panel_config = storage.load_panel_config()
 
@@ -1579,20 +1578,20 @@ def api_setup():
                 panel_config['panel_secret'] = secrets.token_hex(24)
                 storage.save_panel_config(panel_config)
 
-            # Ensure server files
+                                 
             ensure_server_files()
 
-            # Normalize config for server executable
+                                                    
             config['server_path'] = './HPNMP/HappMP'
             config['server_name'] = 'HappMP'
             storage.save_config(config)
 
-            # Install connector and update settings.xml
+                                                       
             install_hpm_connector()
             ensure_connector_resource()
             update_connector_config(panel_config.get('panel_secret'), PANEL_DEFAULT_HOST)
 
-            # Create admin user after successful setup
+                                                      
             _setup_update(step='User', progress=95, message='Creating admin account')
             success, message = create_user(username, password, role='admin', force_password_change=False)
             if not success:
@@ -1637,7 +1636,7 @@ def api_login():
     """Login endpoint with rate limiting"""
     client_ip = request.remote_addr or 'unknown'
 
-    # Check rate limit
+                      
     attempt = _login_attempts.get(client_ip, {})
     if attempt.get('locked_until', 0) > time.time():
         remaining = int(attempt['locked_until'] - time.time())
@@ -1650,7 +1649,7 @@ def api_login():
     success, user = authenticate_user(username, password)
 
     if success:
-        # Reset attempts on success
+                                   
         _login_attempts.pop(client_ip, None)
         session['username'] = username
         session.permanent = True
@@ -1661,7 +1660,7 @@ def api_login():
             'force_password_change': user.get('force_password_change', False)
         })
 
-    # Track failed attempt
+                          
     if client_ip not in _login_attempts:
         _login_attempts[client_ip] = {'count': 0, 'locked_until': 0}
     _login_attempts[client_ip]['count'] += 1
@@ -1820,14 +1819,14 @@ def api_update_profile():
 
     user = users[username]
 
-    # Display name
+                  
     if 'display_name' in data:
         display_name = (data.get('display_name') or '').strip()
         if len(display_name) > 32:
             return jsonify({'success': False, 'message': 'Display name too long'}), 400
         user['display_name'] = display_name or username
 
-    # Avatar
+            
     if 'avatar' in data:
         avatar = (data.get('avatar') or '').strip()
         if not avatar:
@@ -1838,7 +1837,7 @@ def api_update_profile():
                 return jsonify({'success': False, 'message': 'Invalid avatar selection'}), 400
             user['avatar'] = f'builtin:{name}'
         elif avatar.startswith('data:image/'):
-            # Validate size (~1MB max raw)
+                                          
             try:
                 header, b64 = avatar.split(',', 1)
             except ValueError:
@@ -1881,7 +1880,7 @@ def api_profile_change_password():
         log_user_action(session['username'], 'PASSWORD_CHANGE', 'Success')
     return jsonify({'success': success, 'message': message})
 
-# ==================== API - PANEL CONFIG ====================
+                                                              
 
 @app.route('/api/panel-config', methods=['GET'])
 @login_required
@@ -1904,7 +1903,7 @@ def api_set_panel_config():
     incoming_secret = data.get('panel_secret')
     current_secret = panel_config.get('panel_secret')
 
-    # Preserve existing secret if not provided
+                                              
     if not incoming_secret:
         data['panel_secret'] = current_secret
     elif incoming_secret != current_secret:
@@ -1929,7 +1928,7 @@ def api_set_panel_config():
     log_user_action(session['username'], 'UPDATE_PANEL_CONFIG', json.dumps(log_payload))
     return jsonify({'success': True, 'message': 'Panel configuration saved.'})
 
-# ==================== API - PANEL LOCALE (read-only) ====================
+                                                                          
 
 @app.route('/api/panel-locale', methods=['GET'])
 @login_required
@@ -1940,7 +1939,7 @@ def api_panel_locale():
         'panel_name': panel_config.get('panel_name', 'HappinessMP')
     })
 
-# ==================== API - LOCALES ====================
+                                                         
 
 @app.route('/api/locales/<locale>')
 @login_required
@@ -1949,14 +1948,14 @@ def api_get_locale(locale):
     safe_locale = secure_filename(locale)
     locale_file = LOCALES_DIR / f'{safe_locale}.json'
     if not locale_file.exists():
-        # Fallback to English
+                             
         locale_file = LOCALES_DIR / 'en.json'
     if not locale_file.exists():
         return jsonify({}), 404
     with open(locale_file, 'r', encoding='utf-8') as f:
         return jsonify(json.load(f))
 
-# ==================== API - SETTINGS XML ====================
+                                                              
 
 @app.route('/api/settings', methods=['GET'])
 @login_required
@@ -1981,7 +1980,7 @@ def api_set_settings():
         existing = parse_settings_xml() or {}
         incoming_secret = data.get('secret')
 
-        # Preserve existing secret if not provided
+                                                  
         if not incoming_secret:
             data['secret'] = existing.get('secret', '')
         elif incoming_secret != existing.get('secret'):
@@ -2001,7 +2000,7 @@ def api_set_settings():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-# ==================== API - FILES ====================
+                                                       
 
 @app.route('/api/files')
 @login_required
@@ -2128,7 +2127,7 @@ def api_files_delete():
     if not os.path.exists(abs_path):
         return jsonify({'error': 'Path not found'}), 404
 
-    # Prevent deleting the server root
+                                      
     if os.path.normpath(abs_path) == os.path.normpath(get_server_dir()):
         return jsonify({'error': 'Cannot delete server root'}), 403
 
@@ -2252,7 +2251,7 @@ def api_files_decompress():
     dest_dir = os.path.dirname(abs_path)
     try:
         with zipfile.ZipFile(abs_path, 'r') as zf:
-            # Security: check for path traversal in archive
+                                                           
             for name in zf.namelist():
                 resolved = os.path.normpath(os.path.join(dest_dir, name))
                 if not resolved.startswith(get_server_dir()):
@@ -2303,7 +2302,7 @@ def api_files_upload():
         if not filename:
             continue
         dest = os.path.join(abs_path, filename)
-        # Security check
+                        
         if not os.path.normpath(dest).startswith(get_server_dir()):
             continue
         f.save(dest)
@@ -2312,7 +2311,7 @@ def api_files_upload():
     log_user_action(session['username'], 'UPLOAD', f'{req_path}: {", ".join(saved)}')
     return jsonify({'success': True, 'files': saved})
 
-# ==================== API - LOGS ====================
+                                                      
 
 def _log_user_meta(users_map, username: str):
     user = users_map.get(username) if users_map else None
@@ -2327,7 +2326,7 @@ def _parse_log_file(log_file: Path, username: str, display_name: str, avatar_url
                 line = line.strip()
                 if not line:
                     continue
-                # Parse "[2025-01-15 12:30:45] ACTION: details"
+                                                               
                 match = re.match(r'^\[(.+?)\]\s+(\S+?):\s*(.*)', line)
                 if match:
                     ts = match.group(1)
@@ -2375,7 +2374,7 @@ def api_logs_list():
         username = user_dir.name
         dates = []
         for log_file in sorted(user_dir.glob('*.log'), reverse=True):
-            dates.append(log_file.stem)  # e.g. "2025-01-15"
+            dates.append(log_file.stem)                     
         if dates:
             display_name, avatar_url = _log_user_meta(users_map, username)
             result[username] = {
@@ -2433,7 +2432,7 @@ def api_logs_get(username, date):
         e.pop('_ts', None)
     return jsonify({'entries': entries})
 
-# ==================== API - USER MANAGEMENT (ADMIN ONLY) ====================
+                                                                              
 
 @app.route('/api/users', methods=['GET'])
 @admin_required
@@ -2468,11 +2467,11 @@ def api_create_user():
     if not username:
         return jsonify({'success': False, 'message': 'Username required'})
 
-    # Validate username format
+                              
     if not re.match(r'^[a-zA-Z0-9_]{3,32}$', username):
         return jsonify({'success': False, 'message': 'Username must be 3-32 alphanumeric characters (a-z, 0-9, _)'})
 
-    # Generate random password
+                              
     password = generate_password()
 
     success, message = create_user(username, password, role=role, force_password_change=True, permissions=permissions)
@@ -2563,7 +2562,7 @@ def api_toggle_user(username):
 
     return jsonify({'success': True, 'enabled': users[username]['enabled']})
 
-# ==================== API - RESOURCES ====================
+                                                           
 
 @app.route('/api/resources')
 @login_required
@@ -2574,7 +2573,7 @@ def api_list_resources():
     if not os.path.isdir(resources_dir):
         return jsonify({'resources': []})
 
-    # Get resources configured in settings.xml
+                                              
     settings = parse_settings_xml()
     configured_resources = settings.get('resources', []) if settings else []
 
@@ -2582,7 +2581,7 @@ def api_list_resources():
     for name in sorted(os.listdir(resources_dir)):
         full_path = os.path.join(resources_dir, name)
         if os.path.isdir(full_path):
-            # Determine state
+                             
             if name in resource_states:
                 state = resource_states[name]
             elif server_state['running'] and name in configured_resources:
@@ -2592,7 +2591,7 @@ def api_list_resources():
             else:
                 state = 'stopped'
 
-            # Check if has meta.xml
+                                   
             has_meta = os.path.isfile(os.path.join(full_path, 'meta.xml'))
 
             resources.append({
@@ -2703,7 +2702,7 @@ def api_resource_restart(name):
         return jsonify({'success': False, 'message': str(e)})
     return jsonify({'success': False, 'message': 'Failed to send command'})
 
-# ==================== API - PANEL HOOKS (from server resource) ====================
+                                                                                    
 
 def _check_panel_secret():
     """Verify the X-Panel-Secret header matches config."""
@@ -2722,7 +2721,7 @@ def api_panel_hook_player_join():
     name = data.get('name', 'Unknown')
     ip = data.get('ip', '')
 
-    # Store player
+                  
     if server_id is not None:
         connected_players[str(server_id)] = {
             'serverId': server_id,
@@ -2734,7 +2733,7 @@ def api_panel_hook_player_join():
             'joinTime': data.get('joinTime', int(time.time()))
         }
 
-    # Check if banned
+                     
     banned, ban_info = is_player_banned(ip=ip, name=name)
 
     socketio.emit('player_join', data)
@@ -2754,7 +2753,7 @@ def api_panel_hook_player_disconnect():
     data = request.json or {}
     server_id = str(data.get('serverId', ''))
 
-    # Remove from tracking
+                          
     connected_players.pop(server_id, None)
 
     socketio.emit('player_disconnect', data)
@@ -2771,7 +2770,7 @@ def api_panel_hook_players_sync():
     data = request.json or {}
     players = data.get('players', [])
 
-    # Rebuild player map
+                        
     new_players = {}
     for p in players:
         sid = str(p.get('serverId', ''))
@@ -2820,7 +2819,7 @@ def api_panel_hook_pending_actions():
     return jsonify(actions)
 
 
-# ==================== API - PLAYERS ====================
+                                                         
 
 @app.route('/api/players')
 @login_required
@@ -2883,7 +2882,7 @@ def api_players_ban():
     bans.append(ban_entry)
     save_bans(bans)
 
-    # Also kick the player if they're online
+                                            
     if server_id is not None:
         pending_actions.append({
             'type': 'kick',
@@ -2958,7 +2957,7 @@ def api_players_message():
         return jsonify({'success': False, 'message': 'serverId or broadcast required'})
 
 
-# ==================== API - SERVER CONTROL ====================
+                                                                
 
 @app.route('/api/status')
 @login_required
@@ -3046,7 +3045,7 @@ def api_config():
         log_user_action(session['username'], 'UPDATE_CONFIG', 'Success')
         return jsonify({'success': True, 'message': 'Configuration updated'})
 
-# ==================== API - UPDATES ====================
+                                                         
 
 @app.route('/api/update-status')
 def api_update_status():
@@ -3134,7 +3133,7 @@ def api_update_start():
     add_console_line(f'=== UPDATE STARTED ({", ".join(targets)}) ===', session['username'])
     return jsonify({'success': True, 'message': 'Update started'})
 
-# ==================== WEBSOCKET ====================
+                                                     
 
 @socketio.on('connect')
 def handle_connect():
@@ -3147,7 +3146,7 @@ def handle_connect():
     emit('server_status', {'running': server_state['running']})
     emit('update_status', get_update_payload())
 
-# ==================== STARTUP ====================
+                                                   
 
 if __name__ == '__main__':
     add_console_line('=== HAPPINESSMP MANAGER STARTED ===')
@@ -3155,24 +3154,24 @@ if __name__ == '__main__':
     if pin:
         _announce_setup_pin(pin)
 
-    # Start background threads
+                              
     stats_thread = threading.Thread(target=update_stats, daemon=True)
     stats_thread.start()
 
-    # Scheduled restarts thread
+                               
     sched_thread = threading.Thread(target=scheduled_restart_thread, daemon=True)
     sched_thread.start()
 
-    # Update checker thread (every 30 minutes by default)
+                                                         
     update_thread = threading.Thread(target=_update_check_loop, daemon=True)
     update_thread.start()
 
-    # Auto-start server if configured
+                                     
     if panel_config.get('auto_start', False):
         add_console_line('=== AUTO-START ENABLED ===')
 
         def _auto_start():
-            time.sleep(2)  # Give Flask a moment to initialize
+            time.sleep(2)                                     
             start_server('SYSTEM')
 
         threading.Thread(target=_auto_start, daemon=True).start()

@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 from pathlib import Path
 
@@ -6,7 +6,7 @@ import pymysql
 
 try:
     from cryptography.fernet import Fernet
-except Exception:  # pragma: no cover - optional dependency check
+except Exception:                                                
     Fernet = None
 
 DATA_DIR = Path('./data')
@@ -193,7 +193,7 @@ def ensure_schema():
                 )
                 """
             )
-            # Ensure columns exist for older installs
+                                                     
             cur.execute("SHOW COLUMNS FROM users LIKE 'display_name'")
             if not cur.fetchone():
                 cur.execute("ALTER TABLE users ADD COLUMN display_name VARCHAR(64)")

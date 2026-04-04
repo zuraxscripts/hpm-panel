@@ -1,4 +1,3 @@
-﻿#!/usr/bin/env python3
 """
 Updater for HappinessMP Panel + Server files.
 """
@@ -185,7 +184,7 @@ def _merge_server_tree(src_root: Path, dst_root: Path):
 def _load_panel_config():
     try:
         sys.path.insert(0, str(ROOT_DIR))
-        import storage  # pylint: disable=import-error
+        import storage                                
         return storage.load_panel_config()
     except Exception:
         return {}
@@ -194,7 +193,7 @@ def _load_panel_config():
 def _load_server_config():
     try:
         sys.path.insert(0, str(ROOT_DIR))
-        import storage  # pylint: disable=import-error
+        import storage                                
         return storage.load_config()
     except Exception:
         return {}
@@ -203,7 +202,7 @@ def _load_server_config():
 def _save_panel_config(cfg: dict):
     try:
         sys.path.insert(0, str(ROOT_DIR))
-        import storage  # pylint: disable=import-error
+        import storage                                
         storage.save_panel_config(cfg)
     except Exception:
         pass
@@ -212,7 +211,7 @@ def _save_panel_config(cfg: dict):
 def _save_server_config(cfg: dict):
     try:
         sys.path.insert(0, str(ROOT_DIR))
-        import storage  # pylint: disable=import-error
+        import storage                                
         storage.save_config(cfg)
     except Exception:
         pass
@@ -445,7 +444,7 @@ def _terminate_process(pid: int):
     if not pid:
         return
     try:
-        import psutil  # pylint: disable=import-error
+        import psutil                                
         proc = psutil.Process(pid)
         proc.terminate()
         try:
@@ -465,7 +464,7 @@ def _restart_panel(job: dict):
     restart_mode = job.get('restart_mode') or 'standalone'
     server_pid = job.get('server_manager_pid')
     if restart_mode == 'main':
-        # Signal main.py to restart after server_manager exits
+                                                              
         restart_flag = DATA_DIR / 'restart.flag'
         restart_flag.write_text('restart', encoding='utf-8')
         _log('Restart flag created, stopping server manager...')
@@ -539,7 +538,7 @@ def main():
         _log(f'Update failed: {e}')
         return
 
-    # Restart panel
+                   
     _restart_panel(job)
 
 

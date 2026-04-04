@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 HappinessMP Server Manager - Single Entry Point
 Handles dependency installation and starts all services.
@@ -46,7 +45,7 @@ def shutdown(signum=None, frame=None):
     for proc in processes:
         if proc.poll() is None:
             proc.terminate()
-    # Give them a moment to exit gracefully
+                                           
     for proc in processes:
         try:
             proc.wait(timeout=5)
@@ -64,7 +63,7 @@ def shutdown(signum=None, frame=None):
 
 
 def main():
-    # Register signal handlers
+                              
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
@@ -73,11 +72,11 @@ def main():
     print("=" * 55)
     print()
 
-    # Step 1: Install dependencies
+                                  
     install_dependencies()
     print()
 
-    # Step 2: Start Web Control Panel
+                                     
     print("[INFO] Starting Web Control Panel...")
     web_proc = subprocess.Popen(
         [sys.executable, "server_manager.py"],
@@ -90,13 +89,11 @@ def main():
     print("=" * 55)
     print("  Services Started!")
     print()
-    print("  Web Panel:    http://0.0.0.0:8080")
-    print()
     print("  Press Ctrl+C to stop all services")
     print("=" * 55)
     print()
 
-    # Step 4: Wait for processes - if either exits, shut everything down
+                                                                        
     try:
         while True:
             for proc in processes:

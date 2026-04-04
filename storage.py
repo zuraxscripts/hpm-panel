@@ -1,4 +1,4 @@
-﻿import json
+import json
 from pathlib import Path
 
 import db
@@ -15,7 +15,7 @@ DATA_DIR.mkdir(exist_ok=True)
 def _json_load(path: Path, default):
     try:
         if path.exists():
-            # Handle UTF-8 BOM if present (common on Windows-edited JSON).
+                                                                          
             with open(path, 'r', encoding='utf-8-sig') as f:
                 return json.load(f)
     except Exception:
@@ -161,7 +161,7 @@ def load_users():
         try:
             return _db_load_users()
         except Exception:
-            # Fallback to JSON if DB is unavailable
+                                                   
             pass
     return _json_load(USERS_FILE, {})
 
@@ -285,28 +285,28 @@ def migrate_json_to_db(force: bool = False):
         return
     db.ensure_schema()
 
-    # Users
+           
     if USERS_FILE.exists():
         users = _json_load(USERS_FILE, {})
         if users:
             if force or _db_users_count() == 0:
                 _db_save_users(users)
 
-    # Server config
+                   
     if CONFIG_FILE.exists():
         cfg = _json_load(CONFIG_FILE, None)
         if cfg is not None:
             if force or _db_get_app_config('server') is None:
                 _db_set_app_config('server', cfg)
 
-    # Panel config
+                  
     if PANEL_CONFIG_FILE.exists():
         cfg = _json_load(PANEL_CONFIG_FILE, None)
         if cfg is not None:
             if force or _db_get_app_config('panel') is None:
                 _db_set_app_config('panel', cfg)
 
-    # Bans
+          
     if BANS_FILE.exists():
         bans = _json_load(BANS_FILE, [])
         if bans:

@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HappinessMP Panel | Project Overview</title>
+    <style>
+        :root {
+            --bg: #0b0b0c;
+            --bg2: #111113;
+            --bg3: #151518;
+            --border: #1f1f23;
+            --text: #e9e9ee;
+            --muted: #a0a0aa;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --shadow: 0 24px 56px rgba(0, 0, 0, 0.45);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            background: radial-gradient(1200px 800px at 20% -10%, rgba(79, 70, 229, 0.2), transparent 60%),
+                        radial-gradient(1200px 800px at 100% 0%, rgba(59, 130, 246, 0.12), transparent 55%),
+                        var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.55;
+        }
+
+        .ambient {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .ambient span {
+            position: absolute;
+            border-radius: 999px;
+            filter: blur(48px);
+            opacity: 0.45;
+        }
+
+        .ambient span:nth-child(1) {
+            width: 280px;
+            height: 280px;
+            left: -80px;
+            top: 22vh;
+            background: rgba(79, 70, 229, 0.42);
+            animation: floatA 12s ease-in-out infinite;
+        }
+
+        .ambient span:nth-child(2) {
+            width: 240px;
+            height: 240px;
+            right: -70px;
+            top: 58vh;
+            background: rgba(59, 130, 246, 0.35);
+            animation: floatB 11s ease-in-out infinite;
+        }
+
+        @keyframes floatA {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            50% { transform: translate3d(34px, -26px, 0); }
+        }
+
+        @keyframes floatB {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            50% { transform: translate3d(-28px, 24px, 0); }
+        }
+
+        .container {
+            width: min(1160px, calc(100% - 2rem));
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: rgba(8, 8, 10, 0.78);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+        }
+
+        .topbar-inner {
+            width: min(1160px, calc(100% - 2rem));
+            margin: 0 auto;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.8rem 0;
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            letter-spacing: 0.02em;
+        }
+
+        .brand-pill {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.95), rgba(79, 70, 229, 0.55));
+            border: 1px solid rgba(79, 70, 229, 0.5);
+            box-shadow: 0 12px 24px rgba(79, 70, 229, 0.3);
+        }
+
+        .menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .menu a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: color 0.18s ease;
+        }
+
+        .menu a:hover {
+            color: var(--text);
+        }
+
+        .btn {
+            text-decoration: none;
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 999px;
+            padding: 0.65rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 650;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.24);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn.primary {
+            background: rgba(79, 70, 229, 0.2);
+            border-color: rgba(79, 70, 229, 0.35);
+            box-shadow: 0 14px 30px rgba(79, 70, 229, 0.26);
+        }
+
+        .btn.primary:hover {
+            background: rgba(79, 70, 229, 0.28);
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 1.15rem;
+            align-items: stretch;
+            padding: 5rem 0 2rem;
+        }
+
+        .glass {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+        }
+
+        .hero-copy {
+            padding: 1.45rem;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            border-radius: 999px;
+            border: 1px solid rgba(79, 70, 229, 0.35);
+            background: rgba(79, 70, 229, 0.18);
+            color: #c7d2fe;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            padding: 0.34rem 0.65rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 4.6vw, 3.5rem);
+            line-height: 1.03;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.9rem;
+        }
+
+        .hero p {
+            color: var(--muted);
+            font-size: 0.95rem;
+            max-width: 56ch;
+            margin-bottom: 1.15rem;
+        }
+
+        .hero-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .hero-mini {
+            color: #bcc1cb;
+            font-size: 0.74rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .hero-panel {
+            padding: 1.05rem;
+            transform-style: preserve-3d;
+            transition: transform 0.22s ease;
+        }
+
+        .window-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.72rem;
+        }
+
+        .dots {
+            display: inline-flex;
+            gap: 0.32rem;
+        }
+
+        .dots span {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        .dots span:nth-child(1) { background: #f59e0b; }
+        .dots span:nth-child(2) { background: #22c55e; }
+        .dots span:nth-child(3) { background: #3b82f6; }
+
+        .window-tag {
+            color: var(--muted);
+            font-size: 0.66rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .telemetry {
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            background: rgba(0, 0, 0, 0.22);
+            padding: 0.75rem;
+            margin-bottom: 0.7rem;
+        }
+
+        .telemetry-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.62rem;
+        }
+
+        .telemetry-top strong {
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .live {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: #93c5fd;
+            font-size: 0.66rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .live i {
+            width: 0.45rem;
+            height: 0.45rem;
+            border-radius: 999px;
+            background: var(--info);
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+            animation: ping 1.7s ease-in-out infinite;
+        }
+
+        @keyframes ping {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.45); }
+            70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+
+        .bars {
+            display: grid;
+            gap: 0.46rem;
+        }
+
+        .bar {
+            height: 0.56rem;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 44%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, rgba(79, 70, 229, 0.85), rgba(129, 140, 248, 0.95));
+            transition: width 0.65s cubic-bezier(.2, .8, .2, 1);
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.62rem;
+        }
+
+        .hero-stat {
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.22);
+            padding: 0.65rem 0.68rem;
+        }
+
+        .hero-stat strong {
+            display: block;
+            font-size: 1rem;
+            margin-bottom: 0.2rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        .hero-stat span {
+            color: var(--muted);
+            font-size: 0.66rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        section {
+            padding: 2rem 0;
+        }
+
+        .section-head {
+            margin-bottom: 1rem;
+        }
+
+        .section-head h2 {
+            font-size: clamp(1.4rem, 3vw, 2.1rem);
+            margin-bottom: 0.35rem;
+            letter-spacing: -0.02em;
+        }
+
+        .section-head p {
+            color: var(--muted);
+            font-size: 0.9rem;
+            max-width: 68ch;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.78rem;
+        }
+
+        .feature {
+            padding: 0.9rem;
+            transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .feature .idx {
+            display: inline-flex;
+            width: 1.85rem;
+            height: 1.85rem;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.66rem;
+            background: rgba(79, 70, 229, 0.16);
+            border: 1px solid rgba(79, 70, 229, 0.32);
+            color: #c7d2fe;
+            font-size: 0.74rem;
+            font-weight: 700;
+            margin-bottom: 0.62rem;
+        }
+
+        .feature h3 {
+            font-size: 0.92rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .feature p {
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.72rem;
+        }
+
+        .flow {
+            padding: 0.9rem;
+            min-height: 165px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .flow strong {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            border: 1px solid rgba(79, 70, 229, 0.4);
+            background: rgba(79, 70, 229, 0.2);
+            color: #c7d2fe;
+            font-size: 0.64rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 0.24rem 0.5rem;
+            margin-bottom: 0.62rem;
+        }
+
+        .flow h3 {
+            font-size: 0.9rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .flow p {
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+
+        .flow::after {
+            content: "";
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(79, 70, 229, 0.2), rgba(79, 70, 229, 0));
+            right: -44px;
+            bottom: -44px;
+            pointer-events: none;
+        }
+
+        .split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem;
+        }
+
+        .panel {
+            padding: 0.95rem;
+        }
+
+        .panel h3 {
+            font-size: 1rem;
+            margin-bottom: 0.44rem;
+        }
+
+        .list {
+            list-style: none;
+            display: grid;
+            gap: 0.44rem;
+            margin-top: 0.55rem;
+        }
+
+        .list li {
+            color: var(--muted);
+            font-size: 0.8rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.44rem;
+        }
+
+        .list li::before {
+            content: "";
+            width: 0.38rem;
+            height: 0.38rem;
+            border-radius: 999px;
+            background: rgba(79, 70, 229, 0.95);
+            margin-top: 0.4rem;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.58rem;
+            margin-top: 0.8rem;
+        }
+
+        .metric {
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.22);
+            padding: 0.62rem;
+        }
+
+        .metric strong {
+            display: block;
+            font-size: 1rem;
+            margin-bottom: 0.18rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        .metric span {
+            color: var(--muted);
+            font-size: 0.64rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .cta {
+            padding: 1.8rem 1rem;
+            text-align: center;
+            margin: 2rem 0 3rem;
+        }
+
+        .cta h2 {
+            font-size: clamp(1.35rem, 2.7vw, 1.95rem);
+            margin-bottom: 0.35rem;
+        }
+
+        .cta p {
+            color: var(--muted);
+            max-width: 62ch;
+            margin: 0 auto 0.9rem;
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            padding-bottom: 2rem;
+            color: var(--muted);
+            font-size: 0.74rem;
+            display: flex;
+            justify-content: space-between;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.7s cubic-bezier(.2, .8, .2, 1), transform 0.7s cubic-bezier(.2, .8, .2, 1);
+        }
+
+        .reveal.in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 1020px) {
+            .hero {
+                grid-template-columns: 1fr;
+                padding-top: 4.2rem;
+            }
+
+            .grid-3 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .grid-4 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .split {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 680px) {
+            .topbar-inner {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .grid-4 {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation: none !important;
+                transition: none !important;
+            }
+
+            html {
+                scroll-behavior: auto;
+            }
+
+            .reveal {
+                opacity: 1;
+                transform: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient">
+        <span></span>
+        <span></span>
+    </div>
+
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" href="#top">
+                <span class="brand-pill"></span>
+                <span>HappinessMP Panel</span>
+            </a>
+            <nav class="menu">
+                <a href="#capabilities">Capabilities</a>
+                <a href="#workflow">Workflow</a>
+                <a href="#architecture">Architecture</a>
+                <a href="#security">Security</a>
+            </nav>
+            <a class="btn primary" href="/login">Open Panel</a>
+        </div>
+    </header>
+
+    <main id="top" class="container">
+        <section class="hero">
+            <div class="hero-copy glass reveal">
+                <span class="eyebrow">Project Website</span>
+                <h1>One control plane for your entire HappinessMP server stack.</h1>
+                <p>HappinessMP Panel is a full operational surface for GTA IV multiplayer servers. It combines secure authentication, real-time control, file management, player moderation, and update automation in one interface.</p>
+                <div class="hero-actions">
+                    <a class="btn primary" href="/login">Launch Dashboard</a>
+                    <a class="btn" href="#capabilities">Explore Features</a>
+                </div>
+                <div class="hero-mini">
+                    <span>PIN setup and admin bootstrap</span>
+                    <span>Role-based multi-user access</span>
+                    <span>Live socket-driven operations</span>
+                </div>
+            </div>
+
+            <aside class="hero-panel glass reveal" id="tiltPanel">
+                <div class="window-head">
+                    <div class="dots"><span></span><span></span><span></span></div>
+                    <span class="window-tag">Live Telemetry</span>
+                </div>
+
+                <div class="telemetry">
+                    <div class="telemetry-top">
+                        <strong>Server Runtime</strong>
+                        <span class="live"><i></i>live</span>
+                    </div>
+                    <div class="bars">
+                        <div class="bar"><div class="bar-fill"></div></div>
+                        <div class="bar"><div class="bar-fill"></div></div>
+                        <div class="bar"><div class="bar-fill"></div></div>
+                    </div>
+                </div>
+
+                <div class="hero-stats">
+                    <div class="hero-stat"><strong data-count="12">0</strong><span>modules</span></div>
+                    <div class="hero-stat"><strong data-count="100">0</strong><span>api endpoints</span></div>
+                    <div class="hero-stat"><strong data-count="24">0</strong><span>core features</span></div>
+                </div>
+            </aside>
+        </section>
+
+        <section id="capabilities">
+            <div class="section-head reveal">
+                <h2>Capabilities built for real server operations</h2>
+                <p>The panel is engineered around daily workflows: account safety, process lifecycle control, player tooling, file systems, and streamlined maintenance.</p>
+            </div>
+            <div class="grid-3">
+                <article class="feature glass reveal">
+                    <span class="idx">01</span>
+                    <h3>Security Layer</h3>
+                    <p>Login protection, CSRF validation, setup PIN verification, and granular permission enforcement.</p>
+                </article>
+                <article class="feature glass reveal">
+                    <span class="idx">02</span>
+                    <h3>Server Lifecycle</h3>
+                    <p>Start, stop, restart, watchdog metrics, and restart logic from one administrative surface.</p>
+                </article>
+                <article class="feature glass reveal">
+                    <span class="idx">03</span>
+                    <h3>Real-Time Console</h3>
+                    <p>WebSocket console stream, command dispatch, and actionable runtime feedback for operators.</p>
+                </article>
+                <article class="feature glass reveal">
+                    <span class="idx">04</span>
+                    <h3>Files and Resources</h3>
+                    <p>Path-jail file browser, editor, uploads, compression, and resource start/stop/restart controls.</p>
+                </article>
+                <article class="feature glass reveal">
+                    <span class="idx">05</span>
+                    <h3>Players and Moderation</h3>
+                    <p>Live players, kick/ban actions, ban list management, and panel-hook synchronization pipeline.</p>
+                </article>
+                <article class="feature glass reveal">
+                    <span class="idx">06</span>
+                    <h3>Updater Engine</h3>
+                    <p>Background panel/server updates with progress state, logs, and automatic connector maintenance.</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="workflow">
+            <div class="section-head reveal">
+                <h2>Operational flow</h2>
+                <p>From first boot to long-term maintenance, the project keeps setup and day-to-day operations predictable.</p>
+            </div>
+            <div class="grid-4">
+                <article class="flow glass reveal">
+                    <strong>Step 1</strong>
+                    <h3>Bootstrap</h3>
+                    <p>Run setup flow, validate PIN, create admin account, and verify database connection.</p>
+                </article>
+                <article class="flow glass reveal">
+                    <strong>Step 2</strong>
+                    <h3>Configure</h3>
+                    <p>Set server paths, secrets, locale, and panel preferences for the deployment environment.</p>
+                </article>
+                <article class="flow glass reveal">
+                    <strong>Step 3</strong>
+                    <h3>Operate</h3>
+                    <p>Manage server state, inspect logs, control resources, and moderate players in real time.</p>
+                </article>
+                <article class="flow glass reveal">
+                    <strong>Step 4</strong>
+                    <h3>Update</h3>
+                    <p>Run update jobs, monitor progress, preserve config, and restart services safely.</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="architecture">
+            <div class="section-head reveal">
+                <h2>Architecture snapshot</h2>
+                <p>Python backend, SocketIO updates, template UI, configurable storage, and controlled updater orchestration.</p>
+            </div>
+            <div class="split">
+                <article class="panel glass reveal">
+                    <h3>Core Platform</h3>
+                    <ul class="list">
+                        <li>Single entry manager process with dependency bootstrap.</li>
+                        <li>API-first Flask app with socket events for live updates.</li>
+                        <li>JSON storage with optional encrypted MySQL credentials.</li>
+                        <li>Server-path jailing and guarded file operations.</li>
+                        <li>Background updater for panel and server binaries.</li>
+                    </ul>
+                    <div class="metrics">
+                        <div class="metric"><strong data-count="5">0</strong><span>python modules</span></div>
+                        <div class="metric"><strong data-count="4">0</strong><span>main templates</span></div>
+                        <div class="metric"><strong data-count="30">0</strong><span>update interval min</span></div>
+                    </div>
+                </article>
+
+                <article class="panel glass reveal" id="security">
+                    <h3>Security and Reliability</h3>
+                    <ul class="list">
+                        <li>Session controls and CSRF guard for state-changing routes.</li>
+                        <li>Rate-limit lockouts for repeated login failures.</li>
+                        <li>Role and permission checks per feature area.</li>
+                        <li>Safe process termination and restart signaling.</li>
+                        <li>Schema bootstrap and migration support for persistence.</li>
+                    </ul>
+                    <div class="metrics">
+                        <div class="metric"><strong data-count="12">0</strong><span>session hours</span></div>
+                        <div class="metric"><strong data-count="5">0</strong><span>max attempts</span></div>
+                        <div class="metric"><strong data-count="300">0</strong><span>lock seconds</span></div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="cta glass reveal">
+            <h2>Modern operations, same project DNA</h2>
+            <p>This website version now follows the same dark-purple language as the panel itself, so your project presentation and product interface finally match.</p>
+            <div class="hero-actions" style="justify-content:center; margin-bottom:0;">
+                <a class="btn primary" href="/login">Go To Login</a>
+                <a class="btn" href="#top">Back To Top</a>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <span>HappinessMP Panel Project Website</span>
+            <span>Dark mode purple style aligned with dashboard</span>
+        </footer>
+    </main>
+
+    <script>
+        const revealItems = Array.from(document.querySelectorAll('.reveal'));
+        revealItems.forEach((el, index) => {
+            el.style.transitionDelay = `${Math.min(index * 55, 420)}ms`;
+        });
+
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('in');
+                }
+            });
+        }, { threshold: 0.15 });
+
+        revealItems.forEach((el) => revealObserver.observe(el));
+
+        const counters = Array.from(document.querySelectorAll('[data-count]'));
+        const animateCounter = (el) => {
+            const target = Number(el.getAttribute('data-count') || 0);
+            const started = performance.now();
+            const duration = 1200;
+
+            const run = (time) => {
+                const progress = Math.min(1, (time - started) / duration);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = String(Math.round(target * eased));
+                if (progress < 1) {
+                    requestAnimationFrame(run);
+                }
+            };
+
+            requestAnimationFrame(run);
+        };
+
+        const counterObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                animateCounter(entry.target);
+                counterObserver.unobserve(entry.target);
+            });
+        }, { threshold: 0.35 });
+
+        counters.forEach((el) => counterObserver.observe(el));
+
+        const fills = Array.from(document.querySelectorAll('.bar-fill'));
+        const animateBars = () => {
+            fills.forEach((fill) => {
+                fill.style.width = `${34 + Math.random() * 60}%`;
+            });
+        };
+
+        animateBars();
+        setInterval(animateBars, 1400);
+
+        const panel = document.getElementById('tiltPanel');
+        const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+        window.addEventListener('pointermove', (event) => {
+            if (!panel) return;
+            const rect = panel.getBoundingClientRect();
+            const x = (event.clientX - rect.left) / rect.width;
+            const y = (event.clientY - rect.top) / rect.height;
+            const rx = clamp((0.5 - y) * 8, -6, 6);
+            const ry = clamp((x - 0.5) * 9, -7, 7);
+            panel.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+        });
+
+        window.addEventListener('mouseleave', () => {
+            if (!panel) return;
+            panel.style.transform = 'perspective(900px) rotateX(0deg) rotateY(0deg)';
+        });
+    </script>
+</body>
+</html>
