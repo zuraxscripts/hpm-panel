@@ -1,0 +1,45 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-04-05T22:26:05+02:00",
+    "name": "HMP Panel",
+    "author": "Zurax",
+    "description": "Happiness Management Panel - Web-based server management panel for HappinessMP servers.",
+    "features": null,
+    "docker_images": {
+        "ghcr.io/parkervcp/yolks:python_3.9": "ghcr.io/parkervcp/yolks:python_3.9",
+        "ghcr.io/parkervcp/yolks:python_3.10": "ghcr.io/parkervcp/yolks:python_3.10",
+        "ghcr.io/parkervcp/yolks:python_3.11": "ghcr.io/parkervcp/yolks:python_3.11",
+        "ghcr.io/parkervcp/yolks:python_3.12": "ghcr.io/parkervcp/yolks:python_3.12"
+    },
+    "file_denylist": [],
+    "startup": "if [[ -f requirements.txt ]]; then pip install --user -r requirements.txt; fi; python3 main.py --port {{PORT}}",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": \"Listening on port {{PORT}}\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\r\n# HMP Panel installation\r\napt update\r\napt install -y git curl python3\r\n\r\nmkdir -p /mnt/server\r\ncd /mnt/server\r\n\r\n# Clean directory for fresh clone\r\nrm -rf * .git\r\n\r\necho -e \"Downloading code from GitHub...\"\r\ngit clone https://github.com/zuraxscripts/hpm-panel.git .\r\n\r\necho -e \"Installation completed.\"",
+            "container": "ghcr.io/parkervcp/installers:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Port",
+            "description": "Application port",
+            "env_variable": "PORT",
+            "default_value": "8080",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|min:1|max:65535",
+            "field_type": "text"
+        }
+    ]
+}
