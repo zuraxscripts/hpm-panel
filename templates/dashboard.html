@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -201,6 +201,27 @@
       overflow:hidden;
       text-overflow:ellipsis;
       max-width:180px;
+    }
+    .panel-version-refresh{
+      width:30px;
+      height:30px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      flex:0 0 auto;
+    }
+    .panel-version-refresh:hover{
+      border-color: rgba(79,70,229,.45);
+      background: rgba(79,70,229,.18);
+      transform: translateY(-1px);
+    }
+    .panel-version-refresh:active{
+      transform: translateY(0) scale(.98);
     }
 
     .nav{
@@ -1766,7 +1787,7 @@
   <div class="ws-overlay" id="wsOverlay">
     <div class="ws-card">
       <div class="title">Not responding</div>
-      <div class="desc" id="wsOverlayDesc">Realtime connection lost. Trying to reconnect…</div>
+      <div class="desc" id="wsOverlayDesc">Realtime connection lost. Trying to reconnectâ€¦</div>
       <div class="hint">Please wait. Requests are paused.</div>
     </div>
   </div>
@@ -1801,6 +1822,9 @@
             <div class="panel-version-val" id="panelVersionValue">v-</div>
           </div>
         </div>
+        <button class="panel-version-refresh" id="btnRefreshPanelVersion" title="Refresh version">
+          <i class="fa-solid fa-arrows-rotate"></i>
+        </button>
       </div>
 
       <div class="user-card" style="margin-bottom:8px;">
@@ -2109,13 +2133,13 @@
               <table class="table">
                 <thead>
                   <tr>
-                    <th style="width:8%;"><span data-i18n="players_col_id">ID</span></th>
-                    <th style="width:22%;"><span data-i18n="players_col_name">Name</span></th>
+                    <th style="width:14%;"><span data-i18n="players_col_id">ID</span></th>
+                    <th style="width:20%;"><span data-i18n="players_col_name">Name</span></th>
                     <th style="width:10%;"><span data-i18n="players_col_ping">Ping</span></th>
-                    <th style="width:15%;"><span data-i18n="players_col_ip">IP</span></th>
                     <th style="width:10%;"><span data-i18n="players_col_session">Session</span></th>
                     <th style="width:10%;"><span data-i18n="players_col_active">Active</span></th>
-                    <th style="width:25%;text-align:right;"><span data-i18n="players_col_actions">Actions</span></th>
+                    <th style="width:16%;"><span>Last Seen</span></th>
+                    <th style="width:20%;text-align:right;"><span data-i18n="players_col_actions">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody id="playersList">
@@ -2647,10 +2671,10 @@
       fetchStatus(true);
     });
     socket.on('disconnect', () => {
-      showWsOverlay('Realtime connection lost. Trying to reconnect…');
+      showWsOverlay('Realtime connection lost. Trying to reconnectâ€¦');
     });
     socket.on('connect_error', () => {
-      showWsOverlay('Cannot reach panel websocket. Retrying…');
+      showWsOverlay('Cannot reach panel websocket. Retryingâ€¦');
     });
     let currentUser = null;
     let profileDraft = { display_name: '', avatar: '', avatar_url: '' };
@@ -2777,7 +2801,11 @@
       const el = document.getElementById('panelVersionValue');
       if(!el) return;
       const clean = String(version || '').trim();
-      el.textContent = clean ? `v${clean}` : 'v-';
+      if(!clean){
+        el.textContent = 'v-';
+        return;
+      }
+      el.textContent = /^[vV]/.test(clean) ? clean : `v${clean}`;
     }
 
     function formatRole(role) {
@@ -5155,6 +5183,18 @@
       } catch(e){}
     }
 
+    async function forceRefreshPanelVersion(){
+      const out = await apiPost('/api/update-check', { force: true });
+      if(out && out.state){
+        applyUpdateState(out.state);
+      } else {
+        await fetchUpdateStatus();
+      }
+      if(out && out.success === false){
+        toast('error', t('update_title','Update'), out.message || t('error_failed','Failed'));
+      }
+    }
+
     function applyUpdateState(data){
       updateInfo = data || null;
       const panelCurrent = (data && data.panel && data.panel.current) ? data.panel.current : '';
@@ -5573,12 +5613,14 @@
     function playersPayloadSignature(players){
       return (players || [])
         .map(p => [
+          String(p.playerId ?? ''),
           String(p.serverId ?? ''),
           String(p.name ?? ''),
           Number(p.ping ?? 0),
-          normalizePlayerIp(p.ip),
           Number(p.session ?? 0),
-          p.sessionActive ? 1 : 0
+          p.sessionActive ? 1 : 0,
+          p.online ? 1 : 0,
+          String(p.last_connection ?? '')
         ].join('|'))
         .sort()
         .join('||');
@@ -5638,17 +5680,18 @@
       const canSend = currentUser && (isAdmin || (currentUser.permissions && currentUser.permissions.can_send_commands));
 
       activePlayerProfile = {
+        playerId: player.playerId || '',
         serverId: player.serverId,
         name: player.name || 'Unknown',
-        ip: normalizePlayerIp(player.ip || '')
+        online: !!player.online
       };
 
       const on = !!player.online;
       const state = on ? 'ON' : 'OFF';
       const stateClass = on ? 'on' : 'off';
-      document.getElementById('playerProfileTitle').textContent = `${player.name || 'Unknown'} #${player.serverId ?? '-'}`;
+      document.getElementById('playerProfileTitle').textContent = `${player.name || 'Unknown'} [${player.playerId || '-'}]`;
       document.getElementById('ppStateLine').innerHTML = `<span class="${stateClass}">[${state}]</span> ${escapeHtml(player.name || 'Unknown')}`;
-      document.getElementById('ppSubLine').textContent = `ID ${player.serverId ?? '-'} | ${player.ping ?? 0} ms | session ${player.session ?? 0}`;
+      document.getElementById('ppSubLine').textContent = `PID ${player.playerId || '-'} | SID ${player.serverId ?? '-'} | ${player.ping ?? 0} ms | session ${player.session ?? 0}`;
       document.getElementById('ppPlayTime').textContent = formatUptime(profile.playtime_seconds || 0);
       document.getElementById('ppJoinDate').textContent = formatIsoDateTime(profile.join_date);
       document.getElementById('ppLastConnection').textContent = formatIsoDateTime(profile.last_connection);
@@ -5661,22 +5704,45 @@
       const notesEl = document.getElementById('ppNotes');
       notesEl.value = profile.notes || '';
       notesEl.disabled = !canControl;
-      document.getElementById('ppNotesMeta').textContent = `${t('players_profile_key','Profile')}: ${profile.profile_key || '-'}`;
+      document.getElementById('ppNotesMeta').textContent = `${t('players_col_id','ID')}: ${profile.player_id || '-'}`;
       document.getElementById('btnSavePlayerNotes').style.display = canControl ? '' : 'none';
-      document.getElementById('btnPPKick').style.display = canControl ? '' : 'none';
-      document.getElementById('btnPPWarn').style.display = canControl ? '' : 'none';
+      document.getElementById('btnPPKick').style.display = (canControl && on) ? '' : 'none';
+      document.getElementById('btnPPWarn').style.display = (canControl && on) ? '' : 'none';
       document.getElementById('btnPPBan').style.display = isAdmin ? '' : 'none';
-      document.getElementById('btnPPMessage').style.display = canSend ? '' : 'none';
+      document.getElementById('btnPPMessage').style.display = (canSend && on) ? '' : 'none';
 
       const ids = profile.identifiers || {};
-      const idsRows = Object.keys(ids).sort().map(k => `
-        <div class="player-ident-item">
-          <div class="player-ident-head">
-            <span>${escapeHtml(k)}</span>
+      const idsRows = [];
+      if(profile.player_id){
+        idsRows.push(`
+          <div class="player-ident-item">
+            <div class="player-ident-head">
+              <span>player_id</span>
+            </div>
+            <div class="player-ident-val">${escapeHtml(profile.player_id)}</div>
           </div>
-          <div class="player-ident-val">${escapeHtml(ids[k])}</div>
-        </div>
-      `);
+        `);
+      }
+      if(player.serverId !== undefined && player.serverId !== null && String(player.serverId).trim() !== ''){
+        idsRows.push(`
+          <div class="player-ident-item">
+            <div class="player-ident-head">
+              <span>server_id</span>
+            </div>
+            <div class="player-ident-val">${escapeHtml(player.serverId)}</div>
+          </div>
+        `);
+      }
+      Object.keys(ids).sort().forEach(k => {
+        idsRows.push(`
+          <div class="player-ident-item">
+            <div class="player-ident-head">
+              <span>${escapeHtml(k)}</span>
+            </div>
+            <div class="player-ident-val">${escapeHtml(ids[k])}</div>
+          </div>
+        `);
+      });
       renderSimpleList(document.getElementById('ppIdentifiersList'), idsRows, t('players_ids_empty','No identifiers available.'));
 
       const historyRows = (profile.history || []).map(h => `
@@ -5713,14 +5779,14 @@
       renderSimpleList(document.getElementById('ppBanList'), banRows, t('players_bans_empty','No bans.'));
     }
 
-    async function openPlayerProfileModal(serverId){
-      const sid = parseInt(serverId, 10);
-      if(!sid) return;
+    async function openPlayerProfileModal(playerRef){
+      const ref = String(playerRef || '').trim();
+      if(!ref) return;
       document.getElementById('playerProfileModal').classList.add('active');
       setPlayerProfileTab('info');
       document.getElementById('playerProfileTitle').textContent = `${t('loading','Loading...')}`;
       try{
-        const res = await fetch(`/api/players/profile/${encodeURIComponent(sid)}`);
+        const res = await fetch(`/api/players/profile/${encodeURIComponent(ref)}`);
         if(res.status === 401) return (window.location.href = '/login');
         const data = await res.json();
         if(!res.ok || !data.success){
@@ -5736,9 +5802,9 @@
     }
 
     async function saveActivePlayerNotes(){
-      if(!activePlayerProfile || !activePlayerProfile.serverId) return;
+      if(!activePlayerProfile || !activePlayerProfile.playerId) return;
       const notes = document.getElementById('ppNotes').value || '';
-      const out = await apiPost(`/api/players/profile/${encodeURIComponent(activePlayerProfile.serverId)}/notes`, { notes });
+      const out = await apiPost(`/api/players/profile/${encodeURIComponent(activePlayerProfile.playerId)}/notes`, { notes });
       if(out.success){
         toast('success', t('label_player','Player'), t('players_notes_saved','Notes saved.'));
       } else {
@@ -5747,7 +5813,7 @@
     }
 
     async function warnActivePlayer(){
-      if(!activePlayerProfile || !activePlayerProfile.serverId) return;
+      if(!activePlayerProfile || !activePlayerProfile.online || !activePlayerProfile.serverId) return;
       const res = await openInputModal({
         title: t('players_warn_title','Warn Player'),
         submitText: t('btn_warn','Warn'),
@@ -5763,14 +5829,14 @@
       const out = await apiPost('/api/players/warn', { serverId: activePlayerProfile.serverId, reason, duration: 8 });
       if(out.success){
         toast('success', t('label_player','Player'), out.message || t('players_warn_sent','Warn queued'));
-        openPlayerProfileModal(activePlayerProfile.serverId);
+        openPlayerProfileModal(activePlayerProfile.playerId);
       } else {
         toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
       }
     }
 
     async function kickActivePlayer(){
-      if(!activePlayerProfile || !activePlayerProfile.serverId) return;
+      if(!activePlayerProfile || !activePlayerProfile.online || !activePlayerProfile.serverId) return;
       const res = await openInputModal({
         title: t('players_kick_title','Kick Player'),
         submitText: t('btn_kick','Kick'),
@@ -5789,7 +5855,7 @@
     }
 
     async function banActivePlayer(){
-      if(!activePlayerProfile || !activePlayerProfile.serverId) return;
+      if(!activePlayerProfile || !activePlayerProfile.playerId) return;
       const res = await openInputModal({
         title: t('players_ban_title','Ban Player'),
         submitText: t('btn_ban','Ban'),
@@ -5803,22 +5869,22 @@
       if(!res) return;
       const reason = res.field1 || t('players_ban_default','Banned by admin');
       const out = await apiPost('/api/players/ban', {
+        playerId: activePlayerProfile.playerId,
         serverId: activePlayerProfile.serverId,
         name: activePlayerProfile.name,
-        ip: activePlayerProfile.ip,
         reason
       });
       if(out.success){
         toast('success', t('label_player','Player'), out.message || t('players_banned','Banned'));
         loadBans();
-        openPlayerProfileModal(activePlayerProfile.serverId);
+        openPlayerProfileModal(activePlayerProfile.playerId);
       } else {
         toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
       }
     }
 
     async function messageActivePlayer(){
-      if(!activePlayerProfile || !activePlayerProfile.serverId) return;
+      if(!activePlayerProfile || !activePlayerProfile.online || !activePlayerProfile.serverId) return;
       const res = await openInputModal({
         title: t('players_message_title','Message Player'),
         submitText: t('btn_send','Send'),
@@ -5864,33 +5930,38 @@
       list.forEach(p => {
         const tr = document.createElement('tr');
         if(opts.animate) tr.classList.add('player-row-enter');
-        const activeClass = p.sessionActive ? 'success' : 'warn';
-        const activeLabel = p.sessionActive ? t('admin_yes','Yes') : t('admin_no','No');
+        const isOnline = !!p.online;
+        const activeClass = isOnline ? 'success' : 'warn';
+        const activeLabel = isOnline ? t('admin_yes','Yes') : t('admin_no','No');
         const isAdmin = currentUser && currentUser.role === 'admin';
         const canKick = currentUser && (currentUser.role === 'admin' || (currentUser.permissions && currentUser.permissions.can_control_server));
-        const cleanIp = normalizePlayerIp(p.ip || '');
-        const ipCell = cleanIp
-          ? `<span class="player-ip" title="${escapeHtml(cleanIp)}"><span class="ip-mask">**********</span><span class="ip-value">${escapeHtml(cleanIp)}</span></span>`
-          : '-';
+        const canSend = currentUser && (currentUser.role === 'admin' || (currentUser.permissions && currentUser.permissions.can_send_commands));
+        const sid = (p.serverId !== undefined && p.serverId !== null && String(p.serverId).trim() !== '')
+          ? String(p.serverId)
+          : '';
+        const playerId = String(p.playerId || '').trim() || sid;
+        const lastSeen = formatIsoDateTime(p.last_connection || '');
 
         let actionsHtml = '<div class="file-actions">';
-        actionsHtml += `<button class="btnx sm" data-player-act="info" data-sid="${escapeHtml(p.serverId)}" title="${t('players_profile_open','Player Profile')}"><i class="fa-solid fa-circle-info"></i></button>`;
-        if(canKick) {
-          actionsHtml += `<button class="btnx sm warning" data-player-act="kick" data-sid="${escapeHtml(p.serverId)}" data-name="${escapeHtml(p.name)}"><i class="fa-solid fa-shoe-prints"></i> ${t('btn_kick','Kick')}</button>`;
+        actionsHtml += `<button class="btnx sm" data-player-act="info" data-player-id="${escapeHtml(playerId)}" title="${t('players_profile_open','Player Profile')}"><i class="fa-solid fa-circle-info"></i></button>`;
+        if(canKick && isOnline && sid) {
+          actionsHtml += `<button class="btnx sm warning" data-player-act="kick" data-sid="${escapeHtml(sid)}" data-name="${escapeHtml(p.name)}"><i class="fa-solid fa-shoe-prints"></i> ${t('btn_kick','Kick')}</button>`;
         }
         if(isAdmin) {
-          actionsHtml += `<button class="btnx sm danger" data-player-act="ban" data-sid="${escapeHtml(p.serverId)}" data-name="${escapeHtml(p.name)}" data-ip="${escapeHtml(cleanIp)}"><i class="fa-solid fa-gavel"></i> ${t('btn_ban','Ban')}</button>`;
+          actionsHtml += `<button class="btnx sm danger" data-player-act="ban" data-player-id="${escapeHtml(playerId)}" data-sid="${escapeHtml(sid)}" data-name="${escapeHtml(p.name)}"><i class="fa-solid fa-gavel"></i> ${t('btn_ban','Ban')}</button>`;
         }
-        actionsHtml += `<button class="btnx sm" data-player-act="msg" data-sid="${escapeHtml(p.serverId)}" data-name="${escapeHtml(p.name)}" title="${t('btn_message','Message')}"><i class="fa-solid fa-comment"></i></button>`;
+        if(canSend && isOnline && sid){
+          actionsHtml += `<button class="btnx sm" data-player-act="msg" data-sid="${escapeHtml(sid)}" data-name="${escapeHtml(p.name)}" title="${t('btn_message','Message')}"><i class="fa-solid fa-comment"></i></button>`;
+        }
         actionsHtml += '</div>';
 
         tr.innerHTML = `
-          <td style="font-weight:600;">${escapeHtml(p.serverId)}</td>
+          <td style="font-weight:600;font-family:ui-monospace,monospace;">${escapeHtml(playerId)}</td>
           <td><i class="fa-solid fa-user" style="color:var(--primary);margin-right:6px;"></i>${escapeHtml(p.name)}</td>
-          <td>${p.ping || 0} ms</td>
-          <td>${ipCell}</td>
-          <td>${p.session ?? 0}</td>
+          <td>${isOnline ? `${p.ping || 0} ms` : '-'}</td>
+          <td>${isOnline ? (p.session ?? 0) : '-'}</td>
           <td><span class="badgeX ${activeClass}" style="font-size:11px;padding:3px 8px;">${activeLabel}</span></td>
+          <td style="font-size:12px;">${escapeHtml(lastSeen)}</td>
           <td>${actionsHtml}</td>
         `;
         body.appendChild(tr);
@@ -5899,16 +5970,18 @@
       body.querySelectorAll('button[data-player-act]').forEach(btn => {
         btn.addEventListener('click', async () => {
           const act = btn.getAttribute('data-player-act');
-          const sid = parseInt(btn.getAttribute('data-sid'));
+          const sidRaw = String(btn.getAttribute('data-sid') || '').trim();
+          const sid = sidRaw ? parseInt(sidRaw, 10) : null;
+          const playerId = String(btn.getAttribute('data-player-id') || '').trim();
           const name = btn.getAttribute('data-name');
-          const ip = normalizePlayerIp(btn.getAttribute('data-ip') || '');
 
           if(act === 'info') {
-            await openPlayerProfileModal(sid);
+            await openPlayerProfileModal(playerId);
             return;
           }
 
           if(act === 'kick') {
+            if(!sid) return;
             const res = await openInputModal({
               title: t('players_kick_title','Kick Player'),
               submitText: t('btn_kick','Kick'),
@@ -5921,7 +5994,7 @@
             });
             if(res === null) return;
             const reason = res.field1 || t('players_kick_default','Kicked by admin');
-            const out = await apiPost('/api/players/kick', { serverId: sid, reason: reason });
+            const out = await apiPost('/api/players/kick', { serverId: sid, reason });
             if(out.success) toast('success', t('label_player','Player'), out.message || t('players_kick_queued','Kick queued'));
             else toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
           }
@@ -5939,7 +6012,7 @@
             });
             if(res === null) return;
             const reason = res.field1 || t('players_ban_default','Banned by admin');
-            const out = await apiPost('/api/players/ban', { serverId: sid, name: name, ip: ip, reason: reason });
+            const out = await apiPost('/api/players/ban', { playerId, serverId: sid, name, reason });
             if(out.success) {
               toast('success', t('label_player','Player'), out.message || t('players_banned','Banned'));
               loadBans();
@@ -5948,6 +6021,7 @@
           }
 
           if(act === 'msg') {
+            if(!sid) return;
             const res = await openInputModal({
               title: t('players_message_title','Message Player'),
               submitText: t('btn_send','Send'),
@@ -5968,7 +6042,7 @@
             if(!res) return;
             const msg = res.field1;
             const duration = parseInt(res.field2 || '5', 10) || 5;
-            const out = await apiPost('/api/players/message', { serverId: sid, message: msg, duration: duration });
+            const out = await apiPost('/api/players/message', { serverId: sid, message: msg, duration });
             if(out.success) toast('success', t('label_player','Player'), t('players_message_sent','Message sent'));
             else toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
           }
@@ -6271,6 +6345,25 @@
 
     const btnRefreshLogs = document.getElementById('btnRefreshLogs');
     btnRefreshLogs.addEventListener('click', () => runWithLoading(btnRefreshLogs, () => loadLogsIndex(true)));
+
+    const btnRefreshPanelVersion = document.getElementById('btnRefreshPanelVersion');
+    if(btnRefreshPanelVersion){
+      btnRefreshPanelVersion.title = t('btn_refresh','Refresh');
+      btnRefreshPanelVersion.addEventListener('click', async () => {
+        if(btnRefreshPanelVersion.dataset.loading === '1') return;
+        btnRefreshPanelVersion.dataset.loading = '1';
+        btnRefreshPanelVersion.disabled = true;
+        const icon = btnRefreshPanelVersion.querySelector('i');
+        if(icon) icon.classList.add('fa-spin');
+        try{
+          await forceRefreshPanelVersion();
+        } finally {
+          if(icon) icon.classList.remove('fa-spin');
+          btnRefreshPanelVersion.disabled = false;
+          btnRefreshPanelVersion.dataset.loading = '0';
+        }
+      });
+    }
 
     document.getElementById('btnCopyPassword').addEventListener('click', copyPassword);
 

@@ -115,6 +115,8 @@ panel_connector_last_heartbeat = 0.0
 player_profiles = {}
 PROFILE_HISTORY_LIMIT = 120
 PROFILE_WARN_LIMIT = 200
+PROFILE_PLAYER_ID_PREFIX = 'PLR'
+PROFILE_PLAYER_ID_LEN = 12
 
 
 DEFAULT_DISCORD_STATUS_EMBED_TEMPLATE = {
@@ -425,6 +427,67 @@ def _safe_profile_text(value, max_len=2000):
     return str(value or '').strip()[:max_len]
 
 
+def _normalize_player_id(value):
+    pid = _safe_profile_text(value, 64).upper()
+    if not pid:
+        return ''
+    return re.sub(r'[^A-Z0-9\-]', '', pid)[:64]
+
+
+def _generate_player_id(existing_ids=None):
+    existing = set(existing_ids or [])
+    while True:
+        candidate = f'{PROFILE_PLAYER_ID_PREFIX}-{secrets.token_hex(4).upper()}'
+        if len(candidate) > PROFILE_PLAYER_ID_LEN:
+            candidate = candidate[:PROFILE_PLAYER_ID_LEN]
+        if candidate not in existing:
+            return candidate
+
+
+def _ensure_profile_player_id(profile, existing_ids=None):
+    if not isinstance(profile, dict):
+        return False
+    pid = _normalize_player_id(profile.get('player_id'))
+    if pid:
+        profile['player_id'] = pid
+        return False
+    profile['player_id'] = _generate_player_id(existing_ids=existing_ids)
+    return True
+
+
+def _ensure_all_profile_player_ids():
+    changed = False
+    known_ids = set()
+    for profile in player_profiles.values():
+        if not isinstance(profile, dict):
+            continue
+        pid = _normalize_player_id(profile.get('player_id'))
+        if not pid:
+            continue
+        profile['player_id'] = pid
+        known_ids.add(pid)
+
+    for profile in player_profiles.values():
+        if not isinstance(profile, dict):
+            continue
+        if _ensure_profile_player_id(profile, existing_ids=known_ids):
+            changed = True
+            known_ids.add(profile.get('player_id'))
+    return changed
+
+
+def _find_profile_by_player_id(player_id):
+    needle = _normalize_player_id(player_id)
+    if not needle:
+        return None, None
+    for key, profile in player_profiles.items():
+        if not isinstance(profile, dict):
+            continue
+        if _normalize_player_id(profile.get('player_id')) == needle:
+            return key, profile
+    return None, None
+
+
 def _normalize_identifier_key(key):
     k = str(key or '').strip().lower()
     mapping = {
@@ -494,6 +557,7 @@ def _new_player_profile(profile_key):
     now = _now_iso()
     return {
         'profile_key': profile_key,
+        'player_id': _generate_player_id(),
         'first_seen_at': now,
         'last_connection_at': now,
         'total_playtime_sec': 0,
@@ -560,6 +624,15 @@ def _resolve_player_profile(player_data, touch_join=False):
         player_profiles[profile_key] = profile
 
     profile.setdefault('profile_key', profile_key)
+    if not _normalize_player_id(profile.get('player_id')):
+        known_ids = {
+            _normalize_player_id(p.get('player_id'))
+            for p in player_profiles.values()
+            if isinstance(p, dict) and _normalize_player_id(p.get('player_id'))
+        }
+        _ensure_profile_player_id(profile, existing_ids=known_ids)
+    else:
+        profile['player_id'] = _normalize_player_id(profile.get('player_id'))
     profile.setdefault('first_seen_at', _now_iso())
     profile.setdefault('last_connection_at', profile.get('first_seen_at') or _now_iso())
     profile['total_playtime_sec'] = max(0, _safe_int(profile.get('total_playtime_sec'), 0))
@@ -586,6 +659,7 @@ def _resolve_player_profile(player_data, touch_join=False):
         profile['last_connection_at'] = _now_iso()
 
     src['profile_key'] = profile_key
+    src['playerId'] = profile.get('player_id') or ''
     if identifiers:
         src['identifiers'] = identifiers
     return profile_key, profile
@@ -600,6 +674,110 @@ def _find_player_profile_from_connected(server_id):
         return None, None, None
     key, profile = _resolve_player_profile(player, touch_join=False)
     return player, key, profile
+
+
+def _find_connected_player_by_profile_key(profile_key):
+    for row in connected_players.values():
+        if not isinstance(row, dict):
+            continue
+        if _safe_profile_text(row.get('profile_key'), 140) == profile_key:
+            return row
+    return None
+
+
+def _profile_stub_player_row(profile):
+    if not isinstance(profile, dict):
+        return {}
+    return {
+        'serverId': profile.get('last_server_id') or '',
+        'name': _safe_profile_name(profile.get('last_name')),
+        'ip': normalize_player_ip(profile.get('last_ip', '')),
+        'ping': 0,
+        'session': 0,
+        'sessionActive': False,
+        'joinTime': 0
+    }
+
+
+def _resolve_player_profile_ref(player_ref):
+    ref = _safe_profile_text(player_ref, 160)
+    if not ref:
+        return None, None, None, False
+
+    player_row, profile_key, profile = _find_player_profile_from_connected(ref)
+    if profile:
+        return player_row, profile_key, profile, True
+
+    profile_key, profile = _find_profile_by_player_id(ref)
+    if profile:
+        player_row = _find_connected_player_by_profile_key(profile_key)
+        return player_row, profile_key, profile, bool(player_row)
+
+    if ref in player_profiles and isinstance(player_profiles.get(ref), dict):
+        profile_key = ref
+        profile = player_profiles.get(ref)
+        player_row = _find_connected_player_by_profile_key(profile_key)
+        return player_row, profile_key, profile, bool(player_row)
+
+    return None, None, None, False
+
+
+def _build_players_listing():
+    if _ensure_all_profile_player_ids():
+        save_player_profiles(player_profiles)
+
+    now_ts = int(time.time())
+    rows = []
+    seen_profile_keys = set()
+
+    for sid, row in connected_players.items():
+        if not isinstance(row, dict):
+            continue
+        key, profile = _resolve_player_profile(row, touch_join=False)
+        seen_profile_keys.add(key)
+
+        join_ts = _safe_int(row.get('joinTime'), now_ts)
+        current_session = max(0, now_ts - join_ts)
+        total_playtime = max(0, _safe_int(profile.get('total_playtime_sec'), 0) + current_session)
+
+        rows.append({
+            'playerId': profile.get('player_id') or '',
+            'serverId': row.get('serverId', sid),
+            'name': _safe_profile_name(row.get('name')),
+            'ping': _safe_int(row.get('ping'), 0),
+            'session': _safe_int(row.get('session'), 0),
+            'sessionActive': bool(row.get('sessionActive')),
+            'online': True,
+            'first_seen': profile.get('first_seen_at') or _now_iso(),
+            'last_connection': profile.get('last_connection_at') or profile.get('first_seen_at') or _now_iso(),
+            'playtime_seconds': total_playtime
+        })
+
+    for key, profile in player_profiles.items():
+        if not isinstance(profile, dict) or key in seen_profile_keys:
+            continue
+        rows.append({
+            'playerId': profile.get('player_id') or '',
+            'serverId': profile.get('last_server_id') or '',
+            'name': _safe_profile_name(profile.get('last_name')),
+            'ping': 0,
+            'session': 0,
+            'sessionActive': False,
+            'online': False,
+            'first_seen': profile.get('first_seen_at') or _now_iso(),
+            'last_connection': profile.get('last_connection_at') or profile.get('first_seen_at') or _now_iso(),
+            'playtime_seconds': max(0, _safe_int(profile.get('total_playtime_sec'), 0))
+        })
+
+    rows.sort(
+        key=lambda item: (
+            1 if item.get('online') else 0,
+            str(item.get('last_connection') or ''),
+            str(item.get('name') or '').lower()
+        ),
+        reverse=True
+    )
+    return rows
 
 
 def _profile_matching_bans(profile, player_row=None):
@@ -655,6 +833,8 @@ def _finalize_all_connected_sessions(reason='server-stop'):
 
 
 player_profiles = load_player_profiles()
+if _ensure_all_profile_player_ids():
+    save_player_profiles(player_profiles)
 
 
                                                            
@@ -2547,18 +2727,27 @@ def _load_update_config():
 def _load_panel_version():
     global panel_config
     version = str((panel_config or {}).get('panel_version') or '').strip()
-    if not version:
-        data = _safe_json_load(PANEL_VERSION_FILE, {})
-        if isinstance(data, dict):
-            version = str(data.get('version') or '').strip()
-            if version:
-                try:
-                    if not panel_config:
-                        panel_config = storage.load_panel_config()
-                    panel_config['panel_version'] = version
-                    storage.save_panel_config(panel_config)
-                except Exception:
-                    pass
+    file_version = ''
+    data = _safe_json_load(PANEL_VERSION_FILE, {})
+    if isinstance(data, dict):
+        file_version = str(data.get('version') or '').strip()
+
+    use_file_version = bool(
+        file_version and (
+            not version or
+            version in ('0.0.0', 'v0.0.0') or
+            _is_newer_version(file_version, version)
+        )
+    )
+    if use_file_version:
+        version = file_version
+        try:
+            if not panel_config:
+                panel_config = storage.load_panel_config()
+            panel_config['panel_version'] = version
+            storage.save_panel_config(panel_config)
+        except Exception:
+            pass
     if not version:
         version = '0.0.0'
     return version
@@ -4279,7 +4468,7 @@ def api_panel_hook_player_join():
 
     panel_connector_last_heartbeat = time.time()
     socketio.emit('player_join', data)
-    socketio.emit('players_update', {'players': list(connected_players.values())})
+    socketio.emit('players_update', {'players': _build_players_listing()})
     discord_runtime.request_status_refresh(force=False)
 
     if banned:
@@ -4305,7 +4494,7 @@ def api_panel_hook_player_disconnect():
 
     panel_connector_last_heartbeat = time.time()
     socketio.emit('player_disconnect', data)
-    socketio.emit('players_update', {'players': list(connected_players.values())})
+    socketio.emit('players_update', {'players': _build_players_listing()})
     discord_runtime.request_status_refresh(force=False)
     return jsonify({'ok': True})
 
@@ -4344,7 +4533,7 @@ def api_panel_hook_players_sync():
     panel_connector_last_heartbeat = time.time()
     save_player_profiles(player_profiles)
 
-    socketio.emit('players_update', {'players': list(connected_players.values())})
+    socketio.emit('players_update', {'players': _build_players_listing()})
     if _players_snapshot_signature(connected_players.values()) != prev_sig:
         discord_runtime.request_status_refresh(force=False)
     return jsonify({'ok': True})
@@ -4400,44 +4589,46 @@ def api_panel_hook_pending_actions():
 @login_required
 @require_permission('can_view_players')
 def api_players_list():
-    """Get list of currently connected players."""
-    return jsonify({'players': list(connected_players.values())})
+    """Get list of known players (online and offline)."""
+    return jsonify({'players': _build_players_listing()})
 
 
 @app.route('/api/players/profile/<server_id>')
 @login_required
 @require_permission('can_view_players')
 def api_players_profile(server_id):
-    """Get extended profile information for an online player."""
-    player_row, profile_key, profile = _find_player_profile_from_connected(server_id)
-    if not player_row or not profile:
+    """Get extended profile information for an online or offline player."""
+    player_row, profile_key, profile, online = _resolve_player_profile_ref(server_id)
+    if not profile:
         return jsonify({'success': False, 'message': 'Player not found'}), 404
 
     now_ts = int(time.time())
-    join_ts = _safe_int(player_row.get('joinTime'), now_ts)
-    current_session = max(0, now_ts - join_ts)
+    join_ts = _safe_int((player_row or {}).get('joinTime'), now_ts)
+    current_session = max(0, now_ts - join_ts) if online else 0
     playtime_seconds = max(0, _safe_int(profile.get('total_playtime_sec'), 0) + current_session)
 
-    bans = _profile_matching_bans(profile, player_row)
+    match_row = player_row if online else _profile_stub_player_row(profile)
+    bans = _profile_matching_bans(profile, match_row)
     warnings = list(profile.get('warnings') or [])
     history = list(profile.get('history') or [])
 
     warnings.sort(key=lambda w: str(w.get('warned_at') or ''), reverse=True)
     history.sort(key=lambda h: str(h.get('at') or ''), reverse=True)
 
+    display_name = _safe_profile_name((player_row or {}).get('name') or profile.get('last_name'))
     payload = {
         'success': True,
         'player': {
-            'serverId': player_row.get('serverId'),
-            'name': player_row.get('name', 'Unknown'),
-            'ping': _safe_int(player_row.get('ping'), 0),
-            'ip': normalize_player_ip(player_row.get('ip', '')),
-            'session': _safe_int(player_row.get('session'), 0),
-            'sessionActive': bool(player_row.get('sessionActive')),
-            'online': True
+            'playerId': _normalize_player_id(profile.get('player_id')),
+            'serverId': (player_row or {}).get('serverId') if online else profile.get('last_server_id'),
+            'name': display_name,
+            'ping': _safe_int((player_row or {}).get('ping'), 0) if online else 0,
+            'session': _safe_int((player_row or {}).get('session'), 0) if online else 0,
+            'sessionActive': bool((player_row or {}).get('sessionActive')) if online else False,
+            'online': bool(online)
         },
         'profile': {
-            'profile_key': profile_key,
+            'player_id': _normalize_player_id(profile.get('player_id')),
             'join_date': profile.get('first_seen_at') or _now_iso(),
             'last_connection': profile.get('last_connection_at') or profile.get('first_seen_at') or _now_iso(),
             'playtime_seconds': playtime_seconds,
@@ -4460,9 +4651,9 @@ def api_players_profile(server_id):
 @login_required
 @require_permission('can_control_server')
 def api_players_profile_notes(server_id):
-    """Update notes for an online player's profile."""
-    player_row, _, profile = _find_player_profile_from_connected(server_id)
-    if not player_row or not profile:
+    """Update notes for a player profile (online or offline)."""
+    player_row, _, profile, _ = _resolve_player_profile_ref(server_id)
+    if not profile:
         return jsonify({'success': False, 'message': 'Player not found'}), 404
 
     data = request.json or {}
@@ -4470,7 +4661,9 @@ def api_players_profile_notes(server_id):
     profile['notes'] = notes
     _append_profile_history(profile, 'notes', f'Updated by {session["username"]}')
     save_player_profiles(player_profiles)
-    log_user_action(session['username'], 'PLAYER_NOTES_UPDATE', f'{player_row.get("name","Unknown")} ({server_id})')
+    display_name = _safe_profile_name((player_row or {}).get('name') or profile.get('last_name'))
+    player_id = _normalize_player_id(profile.get('player_id'))
+    log_user_action(session['username'], 'PLAYER_NOTES_UPDATE', f'{display_name} ({player_id or server_id})')
     return jsonify({'success': True, 'message': 'Notes saved'})
 
 
@@ -4557,18 +4750,44 @@ def api_players_ban():
     global pending_actions
     data = request.json or {}
     server_id = data.get('serverId')
-    ip = normalize_player_ip(data.get('ip', '').strip())
-    name = data.get('name', '').strip()
-    reason = data.get('reason', 'Banned by admin')
+    player_ref = _safe_profile_text(data.get('playerId'), 64)
+    ip = normalize_player_ip(_safe_profile_text(data.get('ip', ''), 128))
+    name = _safe_profile_text(data.get('name', ''), 64)
+    reason = _safe_profile_text(data.get('reason', ''), 280) or 'Banned by admin'
 
-    if not ip and not name:
+    matched_row = None
+    matched_profile = None
+    if player_ref:
+        matched_row, _, matched_profile, _ = _resolve_player_profile_ref(player_ref)
+    if server_id is not None and not matched_row:
+        matched_row = connected_players.get(str(server_id))
+        if matched_row:
+            _, matched_profile = _resolve_player_profile(matched_row, touch_join=False)
+
+    if matched_profile:
+        if not name:
+            name = _safe_profile_text(matched_profile.get('last_name', ''), 64)
+        if not ip:
+            ip = normalize_player_ip(matched_profile.get('last_ip', ''))
+    if matched_row:
+        if not name:
+            name = _safe_profile_text(matched_row.get('name', ''), 64)
+        if not ip:
+            ip = normalize_player_ip(matched_row.get('ip', ''))
+        if server_id is None:
+            server_id = matched_row.get('serverId')
+
+    clean_name = _safe_profile_name(name) if name else ''
+    valid_name = bool(clean_name and clean_name.lower() != 'unknown')
+
+    if not ip and not valid_name:
         return jsonify({'success': False, 'message': 'IP or name required for ban'})
 
     bans = load_bans()
 
     ban_entry = {
         'ip': ip,
-        'name': name,
+        'name': clean_name if valid_name else '',
         'reason': reason,
         'banned_by': session['username'],
         'banned_at': datetime.now().isoformat()
@@ -4576,24 +4795,26 @@ def api_players_ban():
     bans.append(ban_entry)
     save_bans(bans)
 
-    profile_source = connected_players.get(str(server_id), {}) if server_id is not None else {}
+    profile_source = matched_row or (connected_players.get(str(server_id), {}) if server_id is not None else {})
     if not profile_source:
-        profile_source = {'serverId': server_id, 'name': name, 'ip': ip}
+        profile_source = {'serverId': server_id, 'name': clean_name if valid_name else '', 'ip': ip, 'playerId': player_ref}
     _, profile = _resolve_player_profile(profile_source, touch_join=False)
     _append_profile_history(profile, 'ban', reason)
     save_player_profiles(player_profiles)
 
                                             
-    if server_id is not None:
+    connected_sid = str(server_id) if server_id is not None else ''
+    if connected_sid and connected_sid in connected_players:
         pending_actions.append({
             'type': 'kick',
-            'serverId': server_id,
+            'serverId': connected_players[connected_sid].get('serverId', server_id),
             'reason': f'Banned: {reason}'
         })
 
-    log_user_action(session['username'], 'BAN_PLAYER', f'IP: {ip}, Name: {name}, Reason: {reason}')
+    safe_player_id = _normalize_player_id((profile or {}).get('player_id'))
+    log_user_action(session['username'], 'BAN_PLAYER', f'PlayerID: {safe_player_id}, Name: {clean_name if valid_name else ""}, Reason: {reason}')
 
-    return jsonify({'success': True, 'message': f'Player banned ({name or ip})'})
+    return jsonify({'success': True, 'message': f'Player banned ({(clean_name if valid_name else "") or ip})'})
 
 
 @app.route('/api/players/bans', methods=['GET'])
@@ -4754,6 +4975,24 @@ def api_update_status():
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     return jsonify(get_update_payload())
+
+
+@app.route('/api/update-check', methods=['POST'])
+def api_update_check():
+    if 'username' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+
+    data = request.json or {}
+    force = bool(data.get('force', True))
+    try:
+        check_for_updates(force=force)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e),
+            'state': get_update_payload()
+        }), 500
+    return jsonify({'success': True, 'state': get_update_payload()})
 
 
 @app.route('/api/update-start', methods=['POST'])
