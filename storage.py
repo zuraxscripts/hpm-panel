@@ -12,6 +12,115 @@ BANS_FILE = DATA_DIR / 'bans.json'
 DATA_DIR.mkdir(exist_ok=True)
 
 
+def _default_status_embed_template():
+    return {
+        "title": "{{serverName}}",
+        "url": "{{serverBrowserUrl}}",
+        "description": "",
+        "fields": [
+            {
+                "name": "> STATUS",
+                "value": "```\n{{statusString}}\n```",
+                "inline": True
+            },
+            {
+                "name": "> PLAYERS",
+                "value": "```\n{{serverClients}}/{{serverMaxClients}}\n```",
+                "inline": True
+            },
+            {
+                "name": "> F8 CONNECT COMMAND",
+                "value": "```\nconnect play.xanite.cz\n```"
+            },
+            {
+                "name": "> NEXT RESTART",
+                "value": "```\n{{nextScheduledRestart}}\n```",
+                "inline": True
+            },
+            {
+                "name": "> UPTIME",
+                "value": "```\n{{uptime}}\n```",
+                "inline": True
+            }
+        ],
+        "image": {},
+        "thumbnail": {}
+    }
+
+
+def _default_status_config():
+    return {
+        "onlineString": "🟢 Online",
+        "onlineColor": "#0BA70B",
+        "partialString": "🟡 Partial",
+        "partialColor": "#FFF100",
+        "offlineString": "🔴 Offline",
+        "offlineColor": "#A70B28",
+        "buttons": []
+    }
+
+
+def _default_discord_settings():
+    return {
+        'enabled': False,
+        'token': '',
+        'guild_id': '',
+        'warnings_channel_id': '',
+        'status_embed_json': json.dumps(_default_status_embed_template(), indent=4, ensure_ascii=False),
+        'status_config_json': json.dumps(_default_status_config(), indent=4, ensure_ascii=False),
+        'status_messages': []
+    }
+
+
+def _normalize_discord_settings(data):
+    base = _default_discord_settings()
+    incoming = data if isinstance(data, dict) else {}
+
+    base['enabled'] = bool(incoming.get('enabled', base['enabled']))
+    base['token'] = str(incoming.get('token', base['token']) or '').strip()
+    base['guild_id'] = str(incoming.get('guild_id', base['guild_id']) or '').strip()
+    base['warnings_channel_id'] = str(incoming.get('warnings_channel_id', base['warnings_channel_id']) or '').strip()
+
+    status_embed_json = incoming.get('status_embed_json')
+    if isinstance(status_embed_json, str) and status_embed_json.strip():
+        base['status_embed_json'] = status_embed_json
+
+    status_config_json = incoming.get('status_config_json')
+    if isinstance(status_config_json, str) and status_config_json.strip():
+        base['status_config_json'] = status_config_json
+
+    status_messages = incoming.get('status_messages')
+    if isinstance(status_messages, list):
+        cleaned = []
+        for item in status_messages:
+            if not isinstance(item, dict):
+                continue
+            channel_id = str(item.get('channel_id') or '').strip()
+            message_id = str(item.get('message_id') or '').strip()
+            if not channel_id or not message_id:
+                continue
+            cleaned.append({
+                'channel_id': channel_id,
+                'message_id': message_id
+            })
+        base['status_messages'] = cleaned
+
+    return base
+
+
+def _default_panel_config():
+    return {
+        'locale': 'en',
+        'panel_name': 'HappinessMP',
+        'auto_start': False,
+        'scheduled_restarts': [],
+        'panel_secret': 'changeme',
+        'panel_version': '0.0.0',
+        'panel_port': 20000,
+        'discord': _default_discord_settings()
+    }
+
+
 def _json_load(path: Path, default):
     try:
         if path.exists():
@@ -210,22 +319,17 @@ def save_config(cfg: dict):
 
 
 def load_panel_config():
-    defaults = {
-        'locale': 'en',
-        'panel_name': 'HappinessMP',
-        'auto_start': False,
-        'scheduled_restarts': [],
-        'panel_secret': 'changeme',
-        'panel_version': '0.0.0',
-        'panel_port': 20000
-    }
+    defaults = _default_panel_config()
     if db_enabled():
         data = _db_get_app_config('panel')
         if data is None:
             _db_set_app_config('panel', defaults)
             return dict(defaults)
         for k, v in defaults.items():
-            data.setdefault(k, v)
+            if k == 'discord':
+                data['discord'] = _normalize_discord_settings(data.get('discord'))
+            else:
+                data.setdefault(k, v)
         return data
 
     data = _json_load(PANEL_CONFIG_FILE, None)
@@ -233,7 +337,10 @@ def load_panel_config():
         _json_save(PANEL_CONFIG_FILE, defaults)
         return dict(defaults)
     for k, v in defaults.items():
-        data.setdefault(k, v)
+        if k == 'discord':
+            data['discord'] = _normalize_discord_settings(data.get('discord'))
+        else:
+            data.setdefault(k, v)
     return data
 
 

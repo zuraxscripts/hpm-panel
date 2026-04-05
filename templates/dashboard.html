@@ -952,6 +952,71 @@
     .settings-section-body .form-group:last-child{
       margin-bottom:0;
     }
+    .settings-category-tabs{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .settings-category-tab{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      border-radius:12px;
+      padding:8px 12px;
+      font-size:13px;
+      font-weight:600;
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+    .settings-category-tab:hover{
+      border-color: rgba(79,70,229,.38);
+      transform: translateY(-1px);
+    }
+    .settings-category-tab.active{
+      border-color: rgba(79,70,229,.6);
+      background: rgba(79,70,229,.2);
+    }
+    .settings-category-panel{
+      display:none;
+    }
+    .settings-category-panel.active{
+      display:block;
+      animation: fadeIn .15s ease-out;
+    }
+    .discord-json-wrap{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .discord-json{
+      width:100%;
+      min-height:220px;
+      resize:vertical;
+      font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:12px;
+      line-height:1.5;
+      white-space:pre;
+    }
+    .discord-json-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .discord-status-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.26);
+      padding:6px 12px;
+      font-size:12px;
+    }
+    .discord-status-badge .dot{
+      width:8px;
+      height:8px;
+      box-shadow:none;
+    }
     .input-error{
       padding:10px 12px;
       border-radius:14px;
@@ -1667,21 +1732,50 @@
       <section class="page-section" id="pageSettings">
         <div class="cardx" style="margin-bottom:14px;">
           <div class="cardx-header">
-            <div class="cardx-title"><i class="fa-solid fa-gear"></i> <span data-i18n="card_server_settings">Server Settings</span></div>
-            <button class="btnx primary prominent" id="btnSaveSettings"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="btn_save">Save</span></button>
+            <div class="cardx-title"><i class="fa-solid fa-sliders"></i> <span data-i18n="label_settings">Settings</span></div>
           </div>
-          <div class="cardx-body" id="settingsForm">
-            <div id="settingsLoading" style="color:var(--muted);text-align:center;padding:20px;" data-i18n="loading_settings">Loading settings...</div>
+          <div class="cardx-body">
+            <div class="settings-category-tabs" id="settingsCategoryTabs">
+              <button class="settings-category-tab active" data-settings-cat="general"><span data-i18n="settings_tab_general">General</span></button>
+              <button class="settings-category-tab" data-settings-cat="fxserver"><span data-i18n="settings_tab_fxserver">FXServer</span></button>
+              <button class="settings-category-tab" data-settings-cat="discord"><span data-i18n="settings_tab_discord">Discord</span></button>
+            </div>
           </div>
         </div>
 
-        <div class="cardx">
-          <div class="cardx-header">
-            <div class="cardx-title"><i class="fa-solid fa-sliders"></i> <span data-i18n="card_panel_config">Panel Configuration</span></div>
-            <button class="btnx primary prominent" id="btnSavePanelConfig"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="btn_save">Save</span></button>
+        <div class="settings-category-panel active" id="settingsCategoryGeneral">
+          <div class="cardx" style="margin-bottom:14px;">
+            <div class="cardx-header">
+              <div class="cardx-title"><i class="fa-solid fa-sliders"></i> <span data-i18n="card_panel_config">Panel Configuration</span></div>
+              <button class="btnx primary prominent" id="btnSavePanelConfig"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="btn_save">Save</span></button>
+            </div>
+            <div class="cardx-body" id="panelConfigForm">
+              <div id="panelConfigLoading" style="color:var(--muted);text-align:center;padding:20px;" data-i18n="loading_panel_config">Loading panel config...</div>
+            </div>
           </div>
-          <div class="cardx-body" id="panelConfigForm">
-            <div id="panelConfigLoading" style="color:var(--muted);text-align:center;padding:20px;" data-i18n="loading_panel_config">Loading panel config...</div>
+        </div>
+
+        <div class="settings-category-panel" id="settingsCategoryFxserver">
+          <div class="cardx" style="margin-bottom:14px;">
+            <div class="cardx-header">
+              <div class="cardx-title"><i class="fa-solid fa-gear"></i> <span data-i18n="card_server_settings">Server Settings</span></div>
+              <button class="btnx primary prominent" id="btnSaveSettings"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="btn_save">Save</span></button>
+            </div>
+            <div class="cardx-body" id="settingsForm">
+              <div id="settingsLoading" style="color:var(--muted);text-align:center;padding:20px;" data-i18n="loading_settings">Loading settings...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-category-panel" id="settingsCategoryDiscord">
+          <div class="cardx">
+            <div class="cardx-header">
+              <div class="cardx-title"><i class="fa-brands fa-discord"></i> <span data-i18n="discord_settings_title">Discord Settings</span></div>
+              <button class="btnx primary prominent" id="btnSaveDiscordConfig"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="discord_save_settings">Save Discord Settings</span></button>
+            </div>
+            <div class="cardx-body" id="discordConfigForm">
+              <div id="discordConfigLoading" style="color:var(--muted);text-align:center;padding:20px;" data-i18n="loading_discord_config">Loading discord config...</div>
+            </div>
           </div>
         </div>
       </section>
@@ -2196,6 +2290,10 @@
     let cmEditor = null;
     let settingsDirty = false;
     let panelConfigDirty = false;
+    let discordConfigDirty = false;
+    let settingsCategory = 'general';
+    let panelConfigSnapshot = null;
+    let discordSnapshot = null;
     let pendingNavTarget = null;
     let currentPage = 'dashboard';
     let selectedFiles = new Set();
@@ -2203,6 +2301,38 @@
     let updatePoller = null;
     let statusPoller = null;
     let playersSignature = '';
+
+    function defaultDiscordStatusEmbedTemplate(){
+      return {
+        title: "{{serverName}}",
+        url: "{{serverBrowserUrl}}",
+        description: "",
+        fields: [
+          { name: "> STATUS", value: "```\n{{statusString}}\n```", inline: true },
+          { name: "> PLAYERS", value: "```\n{{serverClients}}/{{serverMaxClients}}\n```", inline: true },
+          { name: "> F8 CONNECT COMMAND", value: "```\nconnect play.xanite.cz\n```" },
+          { name: "> NEXT RESTART", value: "```\n{{nextScheduledRestart}}\n```", inline: true },
+          { name: "> UPTIME", value: "```\n{{uptime}}\n```", inline: true }
+        ],
+        image: {},
+        thumbnail: {}
+      };
+    }
+
+    function defaultDiscordStatusConfigTemplate(){
+      return {
+        onlineString: "🟢 Online",
+        onlineColor: "#0BA70B",
+        partialString: "🟡 Partial",
+        partialColor: "#FFF100",
+        offlineString: "🔴 Offline",
+        offlineColor: "#A70B28",
+        buttons: []
+      };
+    }
+
+    const DEFAULT_DISCORD_EMBED_JSON = JSON.stringify(defaultDiscordStatusEmbedTemplate(), null, 4);
+    const DEFAULT_DISCORD_STATUS_CFG_JSON = JSON.stringify(defaultDiscordStatusConfigTemplate(), null, 4);
 
     let mainUserScrolledUp = false;
     let dashUserScrolledUp = false;
@@ -2467,8 +2597,21 @@
       'resources': 'pageResources'
     };
 
+    function setSettingsCategory(cat, force){
+      const next = String(cat || 'general').toLowerCase();
+      if(!force && settingsCategory === next) return;
+      settingsCategory = next;
+      document.querySelectorAll('.settings-category-tab[data-settings-cat]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-settings-cat') === settingsCategory);
+      });
+      document.querySelectorAll('.settings-category-panel[id^="settingsCategory"]').forEach(panel => {
+        const panelCat = panel.id.replace('settingsCategory', '').toLowerCase();
+        panel.classList.toggle('active', panelCat === settingsCategory);
+      });
+    }
+
     function switchPage(pageId){
-      if(currentPage === 'settings' && (settingsDirty || panelConfigDirty)){
+      if(currentPage === 'settings' && (settingsDirty || panelConfigDirty || discordConfigDirty)){
         pendingNavTarget = pageId;
         document.getElementById('unsavedChangesModal').classList.add('active');
         return;
@@ -2479,6 +2622,7 @@
     function doSwitchPage(pageId){
       settingsDirty = false;
       panelConfigDirty = false;
+      discordConfigDirty = false;
       currentPage = pageId;
 
       document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
@@ -2494,7 +2638,11 @@
       if(pageId === 'files') loadFiles();
       if(pageId === 'admin') loadUsers();
       if(pageId === 'console') setTimeout(scrollConsoleToBottom, 50);
-      if(pageId === 'settings') { loadSettings(); loadPanelConfig(); }
+      if(pageId === 'settings') {
+        setSettingsCategory('general', true);
+        loadSettings();
+        loadPanelConfig();
+      }
       if(pageId === 'logs') loadLogsIndex();
       if(pageId === 'resources') loadResources();
       if(pageId === 'players') { loadPlayers(); loadBans(); }
@@ -2502,6 +2650,9 @@
 
     document.querySelectorAll('.nav-item[data-page]').forEach(el=>{
       el.addEventListener('click', ()=> switchPage(el.getAttribute('data-page')));
+    });
+    document.querySelectorAll('.settings-category-tab[data-settings-cat]').forEach(btn => {
+      btn.addEventListener('click', () => setSettingsCategory(btn.getAttribute('data-settings-cat')));
     });
 
     socket.on('console_update', (data) => addConsoleLine(data.line));
@@ -3660,22 +3811,42 @@
 
     async function loadPanelConfig() {
       const form = document.getElementById('panelConfigForm');
+      const discordForm = document.getElementById('discordConfigForm');
       form.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('loading_panel_config','Loading panel config...')}</div>`;
+      if(discordForm){
+        discordForm.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('loading_discord_config','Loading discord config...')}</div>`;
+      }
       try {
         const res = await fetch('/api/panel-config');
         if(res.status === 401) return (window.location.href = '/login');
         if(res.status === 403){
           form.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('admin_access_required','Admin access required.')}</div>`;
+          if(discordForm){
+            discordForm.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('admin_access_required','Admin access required.')}</div>`;
+          }
           return;
         }
         if (!res.ok) {
           form.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('panel_config_load_failed','Failed to load panel config.')}</div>`;
+          if(discordForm){
+            discordForm.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('discord_config_load_failed','Failed to load discord config.')}</div>`;
+          }
           return;
         }
         const data = await res.json();
+        panelConfigSnapshot = JSON.parse(JSON.stringify(data || {}));
+        discordSnapshot = JSON.parse(JSON.stringify((data && data.discord) || {}));
         renderPanelConfigForm(data, form);
+        if(discordForm){
+          renderDiscordConfigForm(data || {}, discordForm);
+        }
+        panelConfigDirty = false;
+        discordConfigDirty = false;
       } catch(e) {
         form.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('panel_config_load_error','Error loading panel config.')}</div>`;
+        if(discordForm){
+          discordForm.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('discord_config_load_error','Error loading discord config.')}</div>`;
+        }
       }
     }
 
@@ -3836,12 +4007,205 @@
         panelConfigDirty = false;
         toast('success', t('label_panel_config','Panel Config'), t('panel_config_saved'));
         document.getElementById('brandName').textContent = data.panel_name;
+        if(panelConfigSnapshot){
+          panelConfigSnapshot.panel_name = data.panel_name;
+          panelConfigSnapshot.locale = data.locale;
+          panelConfigSnapshot.auto_start = data.auto_start;
+          panelConfigSnapshot.scheduled_restarts = data.scheduled_restarts.slice();
+        }
         await loadLocale();
         if(secretState.panel && secretState.panel.edited){
           lockSecret('panel', true);
         }
       } else {
         toast('error', t('label_panel_config','Panel Config'), out.message || t('error_failed','Failed'));
+      }
+    }
+
+    function renderDiscordRuntimeBadge(runtime){
+      const running = !!(runtime && runtime.running);
+      const blocked = !!(runtime && runtime.admin_permission_blocked);
+      const hasErr = !!(runtime && runtime.last_error);
+      let label = running
+        ? t('discord_runtime_running','Bot running')
+        : t('discord_runtime_stopped','Bot stopped');
+      if(blocked){
+        label = t('discord_runtime_admin_blocked','Bot cannot have Administrator permission.');
+      } else if(hasErr){
+        label = runtime.last_error;
+      }
+      return `
+        <div class="discord-status-badge">
+          <span class="dot ${running && !blocked && !hasErr ? 'on' : ''}"></span>
+          <span>${escapeHtml(label)}</span>
+        </div>
+      `;
+    }
+
+    function renderDiscordConfigForm(allData, container){
+      const data = (allData && allData.discord) || {};
+      const runtime = (allData && allData.discord_runtime) || {};
+      const enabled = !!data.enabled;
+      const guildId = data.guild_id || '';
+      const warningsChannelId = data.warnings_channel_id || '';
+      const embedJson = (data.status_embed_json && String(data.status_embed_json).trim()) ? data.status_embed_json : DEFAULT_DISCORD_EMBED_JSON;
+      const statusCfgJson = (data.status_config_json && String(data.status_config_json).trim()) ? data.status_config_json : DEFAULT_DISCORD_STATUS_CFG_JSON;
+      const tokenPlaceholder = data.token_set ? t('discord_token_saved','Saved token (leave empty to keep)') : '';
+
+      let html = '';
+      html += `<div class="settings-layout">`;
+
+      html += `<div class="settings-col">`;
+      html += `<div class="settings-section">
+        <div class="settings-section-title">${t('discord_section_bot','Discord Bot')}</div>
+        <div class="settings-section-body">`;
+      html += `<div class="form-group">
+        <label class="form-label">${t('discord_enabled','Enabled')}</label>
+        <div class="toggle-wrap" data-toggle="dc_enabled">
+          <div class="toggle ${enabled ? 'on' : ''}" id="dc_enabled"></div>
+          <span>${t('discord_enabled_hint','Enable Discord integration.')}</span>
+        </div>
+      </div>`;
+      html += `<div class="form-group">
+        <label class="form-label">${t('discord_token','Token')}</label>
+        <input class="inputx" id="dc_token" type="password" value="" placeholder="${escapeHtml(tokenPlaceholder)}" autocomplete="off" />
+        <div class="form-hint">${t('discord_token_hint','Create a dedicated Discord bot token. Do not reuse tokens across bots.')}</div>
+      </div>`;
+      html += `<div class="form-group">
+        <label class="form-label">${t('discord_guild_id','Guild/Server ID')}</label>
+        <input class="inputx" id="dc_guild_id" value="${escapeHtml(guildId)}" placeholder="1183161472818368532" />
+        <div class="form-hint">${t('discord_guild_id_hint','Discord guild where slash commands are registered.')}</div>
+      </div>`;
+      html += `<div class="form-group">
+        <label class="form-label">${t('discord_warnings_channel_id','Warnings Channel ID')}</label>
+        <input class="inputx" id="dc_warnings_channel_id" value="${escapeHtml(warningsChannelId)}" placeholder="000000000000000000" />
+        <div class="form-hint">${t('discord_warnings_channel_id_hint','Optional channel for restart/start/stop announcements.')}</div>
+      </div>`;
+      html += `<div class="form-group">
+        <label class="form-label">${t('discord_runtime_status','Runtime Status')}</label>
+        ${renderDiscordRuntimeBadge(runtime)}
+      </div>`;
+      html += `<div class="form-hint">${t('discord_status_add_hint','Use /status add in a channel where the bot can send messages to place the live status embed.')}</div>`;
+      html += `<div class="form-hint">${t('discord_admin_perm_warning','If the bot has Administrator permission, integration will be blocked for safety.')}</div>`;
+      html += `</div></div>`;
+      html += `</div>`;
+
+      html += `<div class="settings-col">`;
+      html += `<div class="settings-section">
+        <div class="settings-section-title">${t('discord_section_status_embed','Status Embed JSON')}</div>
+        <div class="settings-section-body">`;
+      html += `<div class="discord-json-wrap">
+        <textarea class="inputx discord-json" id="dc_status_embed_json">${escapeHtml(embedJson)}</textarea>
+        <div class="discord-json-actions">
+          <button class="btnx sm" id="btnDiscordEmbedDiscard">${t('btn_discard_changes','Discard Changes')}</button>
+          <button class="btnx sm" id="btnDiscordEmbedReset">${t('btn_reset_default','Reset to Default')}</button>
+        </div>
+      </div>`;
+      html += `</div></div>`;
+
+      html += `<div class="settings-section">
+        <div class="settings-section-title">${t('discord_section_status_config','Status Config JSON')}</div>
+        <div class="settings-section-body">`;
+      html += `<div class="discord-json-wrap">
+        <textarea class="inputx discord-json" id="dc_status_config_json">${escapeHtml(statusCfgJson)}</textarea>
+        <div class="discord-json-actions">
+          <button class="btnx sm" id="btnDiscordCfgDiscard">${t('btn_discard_changes','Discard Changes')}</button>
+          <button class="btnx sm" id="btnDiscordCfgReset">${t('btn_reset_default','Reset to Default')}</button>
+        </div>
+      </div>`;
+      html += `</div></div>`;
+      html += `</div>`;
+      html += `</div>`;
+
+      container.innerHTML = html;
+
+      const markDiscordDirty = () => { discordConfigDirty = true; };
+
+      container.querySelectorAll('.toggle-wrap[data-toggle]').forEach(wrap => {
+        wrap.addEventListener('click', () => {
+          const toggle = wrap.querySelector('.toggle');
+          toggle.classList.toggle('on');
+          markDiscordDirty();
+        });
+      });
+      container.querySelectorAll('input, textarea').forEach(el => {
+        el.addEventListener('input', markDiscordDirty);
+        el.addEventListener('change', markDiscordDirty);
+      });
+
+      const defaultEmbed = DEFAULT_DISCORD_EMBED_JSON;
+      const defaultCfg = DEFAULT_DISCORD_STATUS_CFG_JSON;
+      const snapEmbed = discordSnapshot && discordSnapshot.status_embed_json ? discordSnapshot.status_embed_json : defaultEmbed;
+      const snapCfg = discordSnapshot && discordSnapshot.status_config_json ? discordSnapshot.status_config_json : defaultCfg;
+
+      document.getElementById('btnDiscordEmbedDiscard').addEventListener('click', () => {
+        document.getElementById('dc_status_embed_json').value = snapEmbed;
+      });
+      document.getElementById('btnDiscordEmbedReset').addEventListener('click', () => {
+        document.getElementById('dc_status_embed_json').value = defaultEmbed;
+        markDiscordDirty();
+      });
+      document.getElementById('btnDiscordCfgDiscard').addEventListener('click', () => {
+        document.getElementById('dc_status_config_json').value = snapCfg;
+      });
+      document.getElementById('btnDiscordCfgReset').addEventListener('click', () => {
+        document.getElementById('dc_status_config_json').value = defaultCfg;
+        markDiscordDirty();
+      });
+    }
+
+    function parseJsonOrError(rawText, titleLabel){
+      try{
+        const parsed = JSON.parse(rawText);
+        if(!parsed || typeof parsed !== 'object' || Array.isArray(parsed)){
+          toast('error', titleLabel, t('discord_json_object_required','JSON must be an object.'));
+          return null;
+        }
+        return parsed;
+      } catch(e){
+        toast('error', titleLabel, `${t('discord_json_invalid','Invalid JSON')}: ${e.message}`);
+        return null;
+      }
+    }
+
+    async function saveDiscordConfig() {
+      const tokenInput = document.getElementById('dc_token');
+      const guildId = (document.getElementById('dc_guild_id').value || '').trim();
+      const warningsChannelId = (document.getElementById('dc_warnings_channel_id').value || '').trim();
+      const embedRaw = document.getElementById('dc_status_embed_json').value || '';
+      const statusCfgRaw = document.getElementById('dc_status_config_json').value || '';
+
+      const parsedEmbed = parseJsonOrError(embedRaw, t('discord_section_status_embed','Status Embed JSON'));
+      if(!parsedEmbed) return;
+      const parsedCfg = parseJsonOrError(statusCfgRaw, t('discord_section_status_config','Status Config JSON'));
+      if(!parsedCfg) return;
+
+      const idPattern = /^\d{10,32}$/;
+      if(guildId && !idPattern.test(guildId)){
+        toast('error', t('discord_guild_id','Guild/Server ID'), t('discord_id_invalid','Invalid Discord ID format.'));
+        return;
+      }
+      if(warningsChannelId && !idPattern.test(warningsChannelId)){
+        toast('error', t('discord_warnings_channel_id','Warnings Channel ID'), t('discord_id_invalid','Invalid Discord ID format.'));
+        return;
+      }
+
+      const payload = {
+        enabled: document.getElementById('dc_enabled').classList.contains('on'),
+        token: (tokenInput.value || '').trim(),
+        guild_id: guildId,
+        warnings_channel_id: warningsChannelId,
+        status_embed_json: embedRaw,
+        status_config_json: statusCfgRaw
+      };
+
+      const out = await apiPost('/api/panel-config', { discord: payload });
+      if (out.success) {
+        discordConfigDirty = false;
+        toast('success', t('discord_settings_title','Discord Settings'), t('discord_config_saved','Discord configuration saved.'));
+        await loadPanelConfig();
+      } else {
+        toast('error', t('discord_settings_title','Discord Settings'), out.message || t('error_failed','Failed'));
       }
     }
 
@@ -5030,6 +5394,7 @@
 
     document.getElementById('btnSaveSettings').addEventListener('click', saveSettings);
     document.getElementById('btnSavePanelConfig').addEventListener('click', savePanelConfig);
+    document.getElementById('btnSaveDiscordConfig').addEventListener('click', saveDiscordConfig);
 
     document.getElementById('btnSaveFile').addEventListener('click', saveFileFromEditor);
 
@@ -5080,12 +5445,14 @@
       document.getElementById('unsavedChangesModal').classList.remove('active');
       settingsDirty = false;
       panelConfigDirty = false;
+      discordConfigDirty = false;
       if(pendingNavTarget) doSwitchPage(pendingNavTarget);
       pendingNavTarget = null;
     });
     document.getElementById('btnUnsavedSave').addEventListener('click', async ()=> {
       if(settingsDirty) await saveSettings();
       if(panelConfigDirty) await savePanelConfig();
+      if(discordConfigDirty) await saveDiscordConfig();
       document.getElementById('unsavedChangesModal').classList.remove('active');
       if(pendingNavTarget) doSwitchPage(pendingNavTarget);
       pendingNavTarget = null;
