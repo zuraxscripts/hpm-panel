@@ -1,9 +1,3 @@
-"""
-HappinessMP Server Manager - Pterodactyl Style
-Multi-user server control panel for GTA IV with authentication
-"""
-
-                                                                    
 try:
     import flask_patch
 except ImportError:
@@ -253,7 +247,7 @@ def get_setup_pin():
 
 
 def ensure_setup_pin():
-    """Ensure setup PIN exists and return it when setup is required."""
+    
     if not setup_required():
         _clear_setup_pin()
         return None
@@ -359,7 +353,7 @@ def _setup_finish():
 
 
 def load_bans():
-    """Load ban list from file."""
+    
     try:
         return storage.load_bans()
     except Exception:
@@ -367,7 +361,7 @@ def load_bans():
 
 
 def save_bans(bans):
-    """Save ban list to file."""
+    
     storage.save_bans(bans)
 
 
@@ -379,7 +373,7 @@ def normalize_player_ip(ip):
 
 
 def is_player_banned(ip=None, name=None):
-    """Check if a player is banned by IP or name."""
+    
     ip_norm = normalize_player_ip(ip)
     name_norm = str(name or '').strip().lower()
     bans = load_bans()
@@ -856,13 +850,13 @@ if _ensure_all_profile_player_ids():
                                                            
 
 def generate_csrf_token():
-    """Generate or retrieve CSRF token for current session."""
+    
     if '_csrf_token' not in session:
         session['_csrf_token'] = secrets.token_hex(32)
     return session['_csrf_token']
 
 def validate_csrf_token():
-    """Validate CSRF token from request header or form data."""
+    
     token = request.headers.get('X-CSRF-Token') or request.form.get('_csrf_token')
     expected = session.get('_csrf_token')
     if not expected or not token or not secrets.compare_digest(token, expected):
@@ -871,7 +865,7 @@ def validate_csrf_token():
 
 @app.before_request
 def enforce_https_if_enabled():
-    """Optionally force HTTPS when PANEL_FORCE_HTTPS is enabled."""
+    
     if not FORCE_HTTPS:
         return
     if request.is_secure:
@@ -886,7 +880,7 @@ def enforce_https_if_enabled():
 
 @app.before_request
 def csrf_protect():
-    """Check CSRF token on state-changing requests."""
+    
     if request.method in ('POST', 'PUT', 'DELETE'):
                                                                                 
         if request.path in ('/api/login', '/api/setup', '/api/setup-pin', '/api/db-test') or request.path.startswith('/socket.io') or request.path.startswith('/api/panel-hook/'):
@@ -896,7 +890,7 @@ def csrf_protect():
 
 @app.after_request
 def add_security_headers(response):
-    """Add security headers to every response."""
+    
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
@@ -912,18 +906,18 @@ def add_security_headers(response):
 
 @app.route('/api/csrf-token')
 def api_csrf_token():
-    """Return a CSRF token for the current session."""
+    
     return jsonify({'token': generate_csrf_token()})
 
                                                         
 
 def load_panel_config():
-    """Load panel-level configuration."""
+    
     return storage.load_panel_config()
 
 
 def save_panel_config(cfg):
-    """Save panel-level configuration."""
+    
     storage.save_panel_config(cfg)
 
 
@@ -1219,7 +1213,7 @@ def _build_presence_payload_for_discord():
 
 
 def _status_refresh_signature():
-    """Build a stable signature used to avoid unnecessary Discord API updates."""
+    
     settings = parse_settings_xml() or {}
     discord_cfg = _get_discord_config()
     status_cfg = _parse_discord_status_config(discord_cfg)
@@ -1780,7 +1774,7 @@ discord_runtime = DiscordRuntimeManager()
 
                                                        
 def get_current_user():
-    """Get current user data from session."""
+    
     username = session.get('username')
     if not username:
         return None, None
@@ -1788,7 +1782,7 @@ def get_current_user():
 
 
 def require_permission(permission_key: str):
-    """Decorator to require a specific permission on the current user."""
+    
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -1811,20 +1805,20 @@ def require_permission(permission_key: str):
                                                            
 
 def init_users():
-    """Initialize users database"""
+    
     return storage.load_users()
 
 def save_users(users):
-    """Save users database"""
+    
     storage.save_users(users)
 
 def generate_password(length=16):
-    """Generate random password"""
+    
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
     return ''.join(secrets.choice(chars) for _ in range(length))
 
 def get_user(username):
-    """Get user by username"""
+    
     users = init_users()
     return users.get(username)
 
@@ -1870,7 +1864,7 @@ def resolve_avatar_url_for_user(username: str, avatar_value: str):
     return ''
 
 def verify_user_password(username, password):
-    """Verify a user's password without updating login metadata."""
+    
     if not username or not password:
         return False
     users = init_users()
@@ -1885,7 +1879,7 @@ def verify_user_password(username, password):
         return False
 
 def create_user(username, password, role='user', force_password_change=True, permissions=None):
-    """Create new user"""
+    
     users = init_users()
 
     if username in users:
@@ -1942,7 +1936,7 @@ def create_user(username, password, role='user', force_password_change=True, per
     return True, "User created successfully"
 
 def update_user_password(username, new_password):
-    """Update user password"""
+    
     users = init_users()
 
     if username not in users:
@@ -1955,7 +1949,7 @@ def update_user_password(username, new_password):
     return True, "Password updated successfully"
 
 def authenticate_user(username, password):
-    """Authenticate user"""
+    
     users = init_users()
     user = users.get(username)
 
@@ -1974,7 +1968,7 @@ def authenticate_user(username, password):
     return False, None
 
 def setup_required():
-    """Check if initial setup is required"""
+    
     try:
         users = init_users()
         return len(users) == 0
@@ -1985,7 +1979,7 @@ def setup_required():
                                                       
 
 def login_required(f):
-    """Require user to be logged in"""
+    
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'username' not in session:
@@ -1994,7 +1988,7 @@ def login_required(f):
     return decorated_function
 
 def admin_required(f):
-    """Require admin role"""
+    
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'username' not in session:
@@ -2010,7 +2004,7 @@ def admin_required(f):
                                                    
 
 def log_user_action(username, action, details=""):
-    """Log user action"""
+    
     user_log_dir = LOGS_DIR / username
     user_log_dir.mkdir(exist_ok=True)
 
@@ -2023,7 +2017,7 @@ def log_user_action(username, action, details=""):
         f.write(log_entry)
 
 def add_console_line(line, username=None):
-    """Add line to console output"""
+    
     global console_lines
     timestamp = datetime.now().strftime('%H:%M:%S')
 
@@ -2061,11 +2055,11 @@ def add_console_line(line, username=None):
                                                              
 
 def load_config():
-    """Load server configuration"""
+    
     return storage.load_config()
 
 def save_config(cfg):
-    """Save server configuration"""
+    
     storage.save_config(cfg)
 
 if db.is_configured():
@@ -2083,14 +2077,13 @@ config = load_config()
                                                         
 
 def get_server_dir():
-    """Get the server root directory (parent of the executable)."""
+    
     server_path = os.path.abspath(config.get('server_path', './HPNMP/HappMP'))
     return os.path.dirname(server_path)
 
 
 def jail_path(requested_path):
-    """Resolve a user-requested path within the server directory jail.
-    Returns (abs_path, error_message). error_message is None on success."""
+
     server_dir = get_server_dir()
                           
     requested_path = requested_path.replace('\\', '/')
@@ -2104,12 +2097,12 @@ def jail_path(requested_path):
     return abs_path, None
 
 def save_pid(pid):
-    """Save PID to file"""
+    
     with open(PID_FILE, 'w') as f:
         f.write(str(pid))
 
 def load_pid():
-    """Load PID from file"""
+    
     if PID_FILE.exists():
         try:
             with open(PID_FILE, 'r') as f:
@@ -2119,12 +2112,12 @@ def load_pid():
     return None
 
 def remove_pid():
-    """Remove PID file"""
+    
     if PID_FILE.exists():
         PID_FILE.unlink()
 
 def find_server_process():
-    """Find running server process by name"""
+    
     server_name = config.get('server_name', 'HappMP')
 
     for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'create_time']):
@@ -2160,7 +2153,7 @@ def _get_live_process(pid):
 
 
 def sync_server_state_with_system(emit_change=False):
-    """Synchronize in-memory server_state with the real OS process state."""
+    
     global server_process, server_state, resource_states, connected_players, pending_actions, panel_connector_last_heartbeat
 
     prev_running = bool(server_state.get('running'))
@@ -2214,7 +2207,7 @@ def sync_server_state_with_system(emit_change=False):
 
 
 def start_server(username):
-    """Start the server"""
+    
     global server_process, server_state, resource_states, panel_connector_last_heartbeat
 
     if server_state['running']:
@@ -2275,7 +2268,7 @@ def start_server(username):
         return {'success': False, 'message': str(e)}
 
 def stop_server(username):
-    """Stop the server"""
+    
     global server_process, server_state, resource_states, connected_players, pending_actions, panel_connector_last_heartbeat
 
     if not server_state['running']:
@@ -2332,7 +2325,7 @@ def stop_server(username):
         return {'success': False, 'message': str(e)}
 
 def restart_server(username):
-    """Restart the server in background so the HTTP response returns immediately."""
+    
     add_console_line(f'=== RESTARTING SERVER BY {username.upper()} ===', username)
     server_state['restart_count'] += 1
     log_user_action(username, 'RESTART_SERVER', f'Count: {server_state["restart_count"]}')
@@ -2347,7 +2340,7 @@ def restart_server(username):
     return {'success': True, 'message': 'Restarting...'}
 
 def monitor_process():
-    """Monitor server process output"""
+    
     global server_process
 
     if server_process:
@@ -2363,7 +2356,7 @@ def monitor_process():
                 continue
 
 def update_stats():
-    """Update server statistics"""
+    
     global server_state, resource_states, connected_players, pending_actions, panel_connector_last_heartbeat
 
     while True:
@@ -2416,7 +2409,7 @@ def update_stats():
 _last_scheduled_restart_minute = None
 
 def scheduled_restart_thread():
-    """Background thread that checks for scheduled restart times."""
+    
     global _last_scheduled_restart_minute
     while True:
         try:
@@ -2438,12 +2431,12 @@ def scheduled_restart_thread():
                                                         
 
 def get_settings_xml_path():
-    """Get path to settings.xml relative to server directory."""
+    
     return os.path.join(get_server_dir(), 'settings.xml')
 
 
 def parse_settings_xml():
-    """Parse settings.xml into a dict."""
+    
     path = get_settings_xml_path()
     if not os.path.exists(path):
         return None
@@ -2474,7 +2467,7 @@ def parse_settings_xml():
 
 
 def write_settings_xml(data):
-    """Write settings dict back to settings.xml."""
+    
     path = get_settings_xml_path()
     root = ET.Element('settings')
 
@@ -2507,7 +2500,12 @@ def write_settings_xml(data):
 def _download_with_progress(url: str, dest_path: Path, start_pct: int, end_pct: int, label: str):
     dest_path.parent.mkdir(parents=True, exist_ok=True)
     req = urllib.request.Request(url, headers={'User-Agent': 'HappinessMP-Manager/1.0'})
+    final_url = str(url or '')
     with urllib.request.urlopen(req) as resp, open(dest_path, 'wb') as f:
+        try:
+            final_url = str(resp.geturl() or final_url)
+        except Exception:
+            pass
         total = resp.getheader('Content-Length')
         try:
             total = int(total) if total else None
@@ -2530,6 +2528,7 @@ def _download_with_progress(url: str, dest_path: Path, start_pct: int, end_pct: 
                 _setup_update(progress=pct, message=f'{label}: {downloaded / (1024 * 1024):.1f} MB')
                 last_tick = time.time()
         _setup_update(progress=end_pct, message=f'{label}: download complete')
+    return final_url
 
 
 def _find_file(root: Path, filename: str):
@@ -2548,7 +2547,7 @@ def _merge_tree(src: Path, dst: Path):
             shutil.copy2(item, dest)
 
 def _cleanup_setup_downloads():
-    """Remove temporary setup downloads/extracts."""
+    
     try:
         if SETUP_DOWNLOAD_DIR.exists():
             shutil.rmtree(SETUP_DOWNLOAD_DIR, ignore_errors=True)
@@ -2557,15 +2556,21 @@ def _cleanup_setup_downloads():
 
 
 def ensure_server_files():
-    """Download and extract server files if the executable is missing."""
+    global config
+
     server_path = Path(config.get('server_path', './HPNMP/HappMP'))
     if server_path.exists():
         _setup_update(message='Server executable already present, skipping download')
+        if _is_unknown_version_value((config or {}).get('happiness_version')):
+            info = _load_happiness_local_info()
+            detected = str(info.get('version') or '').strip()
+            if detected and not _is_unknown_version_value(detected):
+                _setup_update(message=f'HappinessMP version detected: {detected}')
         return
 
     _setup_update(step='Downloading server files', message='Downloading HappinessMP server files...')
     zip_path = SETUP_DOWNLOAD_DIR / 'HappinessMP_Server_1.8.7_Linux.zip'
-    _download_with_progress(SETUP_SERVER_ZIP_URL, zip_path, 25, 55, 'Server files')
+    downloaded_url = _download_with_progress(SETUP_SERVER_ZIP_URL, zip_path, 25, 55, 'Server files')
 
     extract_dir = SETUP_DOWNLOAD_DIR / 'server_extract'
     if extract_dir.exists():
@@ -2597,11 +2602,28 @@ def ensure_server_files():
     except Exception:
         pass
 
-    _setup_update(message='Server files ready')
+    resolved_zip_url = str(downloaded_url or SETUP_SERVER_ZIP_URL or '').strip()
+    detected_version = _guess_version_from_url(resolved_zip_url)
+    if _is_unknown_version_value(detected_version):
+        detected_version = ''
+    if not detected_version:
+        info = _load_happiness_local_info()
+        maybe_version = str(info.get('version') or '').strip()
+        if maybe_version and not _is_unknown_version_value(maybe_version):
+            detected_version = maybe_version
+        if not resolved_zip_url:
+            resolved_zip_url = str(info.get('zip_url') or '').strip()
+
+    _persist_local_happiness_info(detected_version, resolved_zip_url or SETUP_SERVER_ZIP_URL)
+
+    if detected_version:
+        _setup_update(message=f'Server files ready (HappinessMP {detected_version})')
+    else:
+        _setup_update(message='Server files ready')
 
 
 def install_hpm_connector():
-    """Download latest hpm-connector release and install into resources."""
+    
     _setup_update(step='Downloading connector', message='Resolving latest hpm-connector release...')
     req = urllib.request.Request(SETUP_CONNECTOR_API_URL, headers={'User-Agent': 'HappinessMP-Manager/1.0'})
     with urllib.request.urlopen(req) as resp:
@@ -2647,7 +2669,7 @@ def ensure_connector_resource():
 
 
 def update_connector_config(panel_secret: str, panel_host: str = None):
-    """Update hpm-connector server.lua with panel host + secret."""
+    
     panel_host = panel_host or get_panel_host()
     server_lua = Path(get_server_dir()) / 'resources' / 'hpm-connector' / 'server.lua'
     if not server_lua.exists():
@@ -2769,6 +2791,37 @@ def _load_panel_version():
     return version
 
 
+def _is_unknown_version_value(version: str) -> bool:
+    val = str(version or '').strip().lower()
+    return val in ('', '0', '0.0', '0.0.0', 'v0', 'v0.0', 'v0.0.0')
+
+
+def _persist_local_happiness_info(version: str = '', zip_url: str = ''):
+    global config
+    version = str(version or '').strip()
+    zip_url = str(zip_url or '').strip()
+
+    if not config:
+        config = storage.load_config()
+    if not isinstance(config, dict):
+        return False
+
+    current_version = str(config.get('happiness_version') or '').strip()
+    current_zip = str(config.get('happiness_zip_url') or '').strip()
+    changed = False
+
+    if version and current_version != version:
+        config['happiness_version'] = version
+        changed = True
+    if zip_url and current_zip != zip_url:
+        config['happiness_zip_url'] = zip_url
+        changed = True
+
+    if changed:
+        storage.save_config(config)
+    return changed
+
+
 def _load_happiness_local_info():
     global config
     defaults = {
@@ -2777,38 +2830,31 @@ def _load_happiness_local_info():
     }
     version = str((config or {}).get('happiness_version') or '').strip()
     zip_url = str((config or {}).get('happiness_zip_url') or '').strip()
+    if _is_unknown_version_value(version):
+        version = ''
 
-    if not version:
+    if not version or not zip_url:
         data = _safe_json_load(HAPPINESS_UPDATE_FILE, {})
         if isinstance(data, dict):
-            version = str(data.get('version') or '').strip()
+            file_version = str(data.get('version') or '').strip()
+            file_zip = str(data.get('zip_url') or '').strip()
+            if not version and not _is_unknown_version_value(file_version):
+                version = file_version
             if not zip_url:
-                zip_url = str(data.get('zip_url') or '').strip()
-            if version:
-                try:
-                    if not config:
-                        config = storage.load_config()
-                    config['happiness_version'] = version
-                    if zip_url:
-                        config['happiness_zip_url'] = zip_url
-                    storage.save_config(config)
-                except Exception:
-                    pass
+                zip_url = file_zip
 
     if not version:
-                                                                 
         guess = _guess_version_from_url(zip_url or defaults['zip_url'])
         if guess:
             version = guess
-            try:
-                if not config:
-                    config = storage.load_config()
-                config['happiness_version'] = version
-                if zip_url:
-                    config['happiness_zip_url'] = zip_url
-                storage.save_config(config)
-            except Exception:
-                pass
+
+    if not zip_url:
+        zip_url = defaults['zip_url']
+
+    if version:
+        _persist_local_happiness_info(version, zip_url)
+    elif zip_url:
+        _persist_local_happiness_info(zip_url=zip_url)
 
     return {
         'version': version or defaults['version'],
@@ -2819,7 +2865,7 @@ def _load_happiness_local_info():
 def _guess_version_from_url(url: str) -> str:
     if not url:
         return ''
-    match = re.search(r'(\d+\.\d+\.\d+)', str(url))
+    match = re.search(r'(\d+\.\d+(?:\.\d+)?)', str(url))
     return match.group(1) if match else ''
 
 
@@ -2982,7 +3028,7 @@ def _update_check_loop():
 
 @app.route('/')
 def index():
-    """Main page"""
+    
     if setup_required():
         return redirect(url_for('setup'))
 
@@ -2998,12 +3044,12 @@ def index():
 
 @app.route('/logo.png')
 def logo():
-    """Serve logo image"""
+    
     return send_from_directory('templates', 'logo.png')
 
 @app.route('/pfp/<filename>')
 def pfp_file(filename):
-    """Serve built-in profile pictures."""
+    
     safe_name = secure_filename(filename)
     if safe_name not in list_pfp_files():
         abort(404)
@@ -3011,7 +3057,7 @@ def pfp_file(filename):
 
 @app.route('/setup')
 def setup():
-    """Setup page"""
+    
     if not setup_required():
         return redirect(url_for('index'))
     ensure_setup_pin()
@@ -3019,7 +3065,7 @@ def setup():
 
 @app.route('/login')
 def login():
-    """Login page"""
+    
     if setup_required():
         return redirect(url_for('setup'))
 
@@ -3030,7 +3076,7 @@ def login():
 
 @app.route('/change-password')
 def change_password():
-    """Change password page"""
+    
     if 'username' not in session:
         return redirect(url_for('login'))
 
@@ -3040,7 +3086,7 @@ def change_password():
 
 @app.route('/api/setup-pin', methods=['POST'])
 def api_setup_pin():
-    """Verify setup PIN before allowing setup."""
+    
     if not setup_required():
         return jsonify({'success': False, 'message': 'Setup already completed'}), 400
 
@@ -3059,7 +3105,7 @@ def api_setup_pin():
 
 @app.route('/api/setup', methods=['POST'])
 def api_setup():
-    """Initial setup - create admin user"""
+    
     if not setup_required():
         return jsonify({'success': False, 'message': 'Setup already completed'})
 
@@ -3180,7 +3226,7 @@ def api_setup_status():
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
-    """Login endpoint with rate limiting"""
+    
     client_ip = request.remote_addr or 'unknown'
 
                       
@@ -3219,7 +3265,7 @@ def api_login():
 
 @app.route('/api/logout', methods=['POST'])
 def api_logout():
-    """Logout endpoint"""
+    
     if 'username' in session:
         log_user_action(session['username'], 'LOGOUT', 'Success')
         session.pop('username', None)
@@ -3229,7 +3275,7 @@ def api_logout():
 @app.route('/api/change-password', methods=['POST'])
 @login_required
 def api_change_password():
-    """Change password endpoint"""
+    
     data = request.json
     new_password = data.get('password', '').strip()
 
@@ -3247,7 +3293,7 @@ def api_change_password():
 @login_required
 @admin_required
 def api_verify_password():
-    """Verify current user's password (admin only)."""
+    
     data = request.json or {}
     password = (data.get('password') or '').strip()
     if not password:
@@ -3263,7 +3309,7 @@ def api_verify_password():
 @login_required
 @admin_required
 def api_get_settings_secret():
-    """Return settings.xml secret for admin after password verification."""
+    
     data = request.json or {}
     password = (data.get('password') or '').strip()
     if not password:
@@ -3279,7 +3325,7 @@ def api_get_settings_secret():
 @login_required
 @admin_required
 def api_get_panel_secret():
-    """Return panel secret for admin after password verification."""
+    
     data = request.json or {}
     password = (data.get('password') or '').strip()
     if not password:
@@ -3291,7 +3337,7 @@ def api_get_panel_secret():
 @app.route('/api/current-user')
 @login_required
 def api_current_user():
-    """Get current user info"""
+    
     user = get_user(session['username'])
 
     if not user:
@@ -3433,7 +3479,7 @@ def api_profile_change_password():
 @login_required
 @admin_required
 def api_get_panel_config():
-    """Get panel configuration."""
+    
     safe_cfg = dict(panel_config)
     panel_secret = safe_cfg.pop('panel_secret', None)
     safe_cfg['panel_secret_set'] = bool(panel_secret)
@@ -3450,7 +3496,7 @@ def api_get_panel_config():
 @login_required
 @admin_required
 def api_set_panel_config():
-    """Update panel configuration."""
+    
     global panel_config
     data = request.json or {}
     incoming_secret = data.get('panel_secret')
@@ -3545,7 +3591,7 @@ def api_set_panel_config():
 @app.route('/api/panel-locale', methods=['GET'])
 @login_required
 def api_panel_locale():
-    """Return safe, read-only panel settings for clients (e.g., locale)."""
+    
     return jsonify({
         'locale': panel_config.get('locale', 'en'),
         'panel_name': panel_config.get('panel_name', 'HappinessMP')
@@ -3556,7 +3602,7 @@ def api_panel_locale():
 @app.route('/api/locales/<locale>')
 @login_required
 def api_get_locale(locale):
-    """Serve locale JSON file."""
+    
     safe_locale = secure_filename(locale)
     locale_file = LOCALES_DIR / f'{safe_locale}.json'
     if not locale_file.exists():
@@ -3573,7 +3619,7 @@ def api_get_locale(locale):
 @login_required
 @admin_required
 def api_get_settings():
-    """Parse settings.xml and return as JSON."""
+    
     data = parse_settings_xml()
     if data is None:
         return jsonify({'error': 'settings.xml not found or unreadable'}), 404
@@ -3586,7 +3632,7 @@ def api_get_settings():
 @login_required
 @admin_required
 def api_set_settings():
-    """Write JSON back to settings.xml."""
+    
     data = request.json or {}
     try:
         existing = parse_settings_xml() or {}
@@ -3623,7 +3669,7 @@ def api_set_settings():
 @login_required
 @require_permission('can_view_files')
 def api_files():
-    """List files in a directory (with path jail)."""
+    
     req_path = request.args.get('path', '')
     abs_path, err = jail_path(req_path)
     if err:
@@ -3659,7 +3705,7 @@ def api_files():
 @login_required
 @require_permission('can_view_files')
 def api_files_read():
-    """Read a text file's contents (max 2MB)."""
+    
     req_path = request.args.get('path', '')
     abs_path, err = jail_path(req_path)
     if err:
@@ -3683,7 +3729,7 @@ def api_files_read():
 @login_required
 @require_permission('can_edit_files')
 def api_files_write():
-    """Write content to a file."""
+    
     data = request.json or {}
     req_path = data.get('path', '')
     content = data.get('content', '')
@@ -3704,7 +3750,7 @@ def api_files_write():
 @login_required
 @require_permission('can_edit_files')
 def api_files_rename():
-    """Rename a file or folder."""
+    
     data = request.json or {}
     req_path = data.get('path', '')
     new_name = data.get('new_name', '').strip()
@@ -3735,7 +3781,7 @@ def api_files_rename():
 @login_required
 @require_permission('can_edit_files')
 def api_files_delete():
-    """Delete a file or folder."""
+    
     req_path = request.args.get('path', '')
     abs_path, err = jail_path(req_path)
     if err:
@@ -3763,7 +3809,7 @@ def api_files_delete():
 @login_required
 @require_permission('can_edit_files')
 def api_files_create_folder():
-    """Create a new directory."""
+    
     data = request.json or {}
     req_path = data.get('path', '')
     abs_path, err = jail_path(req_path)
@@ -3782,7 +3828,7 @@ def api_files_create_folder():
 @login_required
 @require_permission('can_edit_files')
 def api_files_compress():
-    """Compress a file or folder into a .zip archive."""
+    
     data = request.json or {}
     req_path = data.get('path', '')
     abs_path, err = jail_path(req_path)
@@ -3813,7 +3859,7 @@ def api_files_compress():
 @login_required
 @require_permission('can_view_files')
 def api_files_compress_multiple():
-    """Compress multiple files/folders into a single zip and return as download."""
+    
     data = request.json or {}
     paths = data.get('paths', [])
     if not paths:
@@ -3852,7 +3898,7 @@ def api_files_compress_multiple():
 @login_required
 @require_permission('can_edit_files')
 def api_files_decompress():
-    """Decompress a .zip archive in place."""
+    
     data = request.json or {}
     req_path = data.get('path', '')
     abs_path, err = jail_path(req_path)
@@ -3884,7 +3930,7 @@ def api_files_decompress():
 @login_required
 @require_permission('can_view_files')
 def api_files_download():
-    """Download a file."""
+    
     req_path = request.args.get('path', '')
     abs_path, err = jail_path(req_path)
     if err:
@@ -3900,7 +3946,7 @@ def api_files_download():
 @login_required
 @require_permission('can_edit_files')
 def api_files_upload():
-    """Upload file(s) via multipart form data."""
+    
     req_path = request.form.get('path', '')
     abs_path, err = jail_path(req_path)
     if err:
@@ -3975,7 +4021,7 @@ def _parse_log_file(log_file: Path, username: str, display_name: str, avatar_url
 @login_required
 @require_permission('can_view_logs')
 def api_logs_list():
-    """List all users with available log dates."""
+    
     result = {}
     all_dates = set()
     try:
@@ -4009,7 +4055,7 @@ def api_logs_list():
 @login_required
 @require_permission('can_view_logs')
 def api_logs_get(username, date):
-    """Get log entries for a specific user and date."""
+    
     safe_user = secure_filename(username)
     safe_date = secure_filename(date)
     try:
@@ -4054,7 +4100,7 @@ def api_logs_get(username, date):
 @app.route('/api/users', methods=['GET'])
 @admin_required
 def api_list_users():
-    """List all users"""
+    
     users = init_users()
 
     user_list = []
@@ -4075,7 +4121,7 @@ def api_list_users():
 @app.route('/api/users', methods=['POST'])
 @admin_required
 def api_create_user():
-    """Create new user"""
+    
     data = request.json or {}
     username = data.get('username', '').strip()
     role = data.get('role', 'user')
@@ -4114,7 +4160,7 @@ def api_create_user():
 @app.route('/api/users/<username>', methods=['DELETE'])
 @admin_required
 def api_delete_user(username):
-    """Delete user"""
+    
     users = init_users()
 
     if username not in users:
@@ -4133,7 +4179,7 @@ def api_delete_user(username):
 @app.route('/api/users/<username>', methods=['PUT'])
 @admin_required
 def api_update_user(username):
-    """Update user role and permissions."""
+    
     users = init_users()
     if username not in users:
         return jsonify({'success': False, 'message': 'User not found'})
@@ -4154,7 +4200,7 @@ def api_update_user(username):
 @app.route('/api/users/<username>/force-password-change', methods=['POST'])
 @admin_required
 def api_force_password_change(username):
-    """Force a user to change password on next login."""
+    
     users = init_users()
     if username not in users:
         return jsonify({'success': False, 'message': 'User not found'})
@@ -4168,7 +4214,7 @@ def api_force_password_change(username):
 @app.route('/api/users/<username>/toggle', methods=['POST'])
 @admin_required
 def api_toggle_user(username):
-    """Enable/disable user"""
+    
     users = init_users()
 
     if username not in users:
@@ -4191,7 +4237,7 @@ def api_toggle_user(username):
 @login_required
 @require_permission('can_manage_resources')
 def api_list_resources():
-    """List all resources in the server resources/ directory."""
+    
     resources_dir = os.path.join(get_server_dir(), 'resources')
     if not os.path.isdir(resources_dir):
         return jsonify({'resources': []})
@@ -4230,7 +4276,7 @@ def api_list_resources():
 @login_required
 @admin_required
 def api_resource_configure(name):
-    """Add a resource to settings.xml."""
+    
     safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '', name or '')
     if not safe_name:
         return jsonify({'success': False, 'message': 'Invalid resource name'}), 400
@@ -4258,7 +4304,7 @@ def api_resource_configure(name):
 @login_required
 @require_permission('can_manage_resources')
 def api_resource_start(name):
-    """Start a resource by sending resstart command."""
+    
     global server_process, resource_states
     if not server_state['running']:
         return jsonify({'success': False, 'message': 'Server is not running'})
@@ -4282,7 +4328,7 @@ def api_resource_start(name):
 @login_required
 @require_permission('can_manage_resources')
 def api_list_addons():
-    """List all addons in the server addons/ directory."""
+    
     addons_dir = os.path.join(get_server_dir(), 'addons')
     if not os.path.isdir(addons_dir):
         return jsonify({'addons': []})
@@ -4317,7 +4363,7 @@ def api_list_addons():
 @login_required
 @admin_required
 def api_addon_configure(name):
-    """Add an addon to settings.xml."""
+    
     safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '', name or '')
     if not safe_name:
         return jsonify({'success': False, 'message': 'Invalid addon name'}), 400
@@ -4345,7 +4391,7 @@ def api_addon_configure(name):
 @login_required
 @require_permission('can_manage_resources')
 def api_addon_start(name):
-    """Start an addon by sending addonstart command."""
+    
     global server_process, resource_states
     if not server_state['running']:
         return jsonify({'success': False, 'message': 'Server is not running'})
@@ -4369,7 +4415,7 @@ def api_addon_start(name):
 @login_required
 @require_permission('can_manage_resources')
 def api_addon_stop(name):
-    """Addon stop is not supported at runtime."""
+    
     safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '', name or '')
     if safe_name:
         log_user_action(session['username'], 'ADDON_STOP_BLOCKED', safe_name)
@@ -4383,7 +4429,7 @@ def api_addon_stop(name):
 @login_required
 @require_permission('can_manage_resources')
 def api_addon_restart(name):
-    """Addon restart is not supported at runtime."""
+    
     safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '', name or '')
     if safe_name:
         log_user_action(session['username'], 'ADDON_RESTART_BLOCKED', safe_name)
@@ -4397,7 +4443,7 @@ def api_addon_restart(name):
 @login_required
 @require_permission('can_manage_resources')
 def api_resource_stop(name):
-    """Stop a resource by sending resstop command."""
+    
     global server_process, resource_states
     if not server_state['running']:
         return jsonify({'success': False, 'message': 'Server is not running'})
@@ -4421,7 +4467,7 @@ def api_resource_stop(name):
 @login_required
 @require_permission('can_manage_resources')
 def api_resource_restart(name):
-    """Restart a resource by sending resrestart command."""
+    
     global server_process, resource_states
     if not server_state['running']:
         return jsonify({'success': False, 'message': 'Server is not running'})
@@ -4443,7 +4489,7 @@ def api_resource_restart(name):
                                                                                     
 
 def _check_panel_secret():
-    """Verify the X-Panel-Secret header matches config."""
+    
     secret = request.headers.get('X-Panel-Secret', '')
     expected = panel_config.get('panel_secret', 'changeme')
     return secrets.compare_digest(secret, expected)
@@ -4451,7 +4497,7 @@ def _check_panel_secret():
 
 @app.route('/api/panel-hook/player-join', methods=['POST'])
 def api_panel_hook_player_join():
-    """Hook: player joined the server (called by panel-connector resource)."""
+    
     global panel_connector_last_heartbeat
     if not _check_panel_secret():
         return jsonify({'error': 'Invalid secret'}), 403
@@ -4495,7 +4541,7 @@ def api_panel_hook_player_join():
 
 @app.route('/api/panel-hook/player-disconnect', methods=['POST'])
 def api_panel_hook_player_disconnect():
-    """Hook: player disconnected (called by panel-connector resource)."""
+    
     global panel_connector_last_heartbeat
     if not _check_panel_secret():
         return jsonify({'error': 'Invalid secret'}), 403
@@ -4517,7 +4563,7 @@ def api_panel_hook_player_disconnect():
 
 @app.route('/api/panel-hook/players-sync', methods=['POST'])
 def api_panel_hook_players_sync():
-    """Hook: full player list sync (called periodically by panel-connector)."""
+    
     global connected_players, panel_connector_last_heartbeat
     if not _check_panel_secret():
         return jsonify({'error': 'Invalid secret'}), 403
@@ -4557,7 +4603,7 @@ def api_panel_hook_players_sync():
 
 @app.route('/api/panel-hook/resource-state', methods=['POST'])
 def api_panel_hook_resource_state():
-    """Hook: resource state changed (called by panel-connector resource)."""
+    
     global resource_states, panel_connector_last_heartbeat
     if not _check_panel_secret():
         return jsonify({'error': 'Invalid secret'}), 403
@@ -4572,7 +4618,7 @@ def api_panel_hook_resource_state():
 
 @app.route('/api/panel-hook/heartbeat', methods=['POST'])
 def api_panel_hook_heartbeat():
-    """Hook: heartbeat from panel-connector resource."""
+    
     global panel_connector_last_heartbeat
     if not _check_panel_secret():
         return jsonify({'error': 'Invalid secret'}), 403
@@ -4588,7 +4634,7 @@ def api_panel_hook_heartbeat():
 
 @app.route('/api/panel-hook/pending-actions', methods=['GET'])
 def api_panel_hook_pending_actions():
-    """Return pending actions for the resource to execute, then clear them."""
+    
     global pending_actions
     secret = request.args.get('secret', '')
     expected = panel_config.get('panel_secret', 'changeme')
@@ -4605,7 +4651,7 @@ def api_panel_hook_pending_actions():
 @login_required
 @require_permission('can_view_players')
 def api_players_list():
-    """Get list of known players (online and offline)."""
+    
     return jsonify(_players_payload())
 
 
@@ -4613,7 +4659,7 @@ def api_players_list():
 @login_required
 @require_permission('can_view_players')
 def api_players_profile(server_id):
-    """Get extended profile information for an online or offline player."""
+    
     player_row, profile_key, profile, online = _resolve_player_profile_ref(server_id)
     if not profile:
         return jsonify({'success': False, 'message': 'Player not found'}), 404
@@ -4667,7 +4713,7 @@ def api_players_profile(server_id):
 @login_required
 @require_permission('can_control_server')
 def api_players_profile_notes(server_id):
-    """Update notes for a player profile (online or offline)."""
+    
     player_row, _, profile, _ = _resolve_player_profile_ref(server_id)
     if not profile:
         return jsonify({'success': False, 'message': 'Player not found'}), 404
@@ -4687,7 +4733,7 @@ def api_players_profile_notes(server_id):
 @login_required
 @require_permission('can_control_server')
 def api_players_warn():
-    """Warn a player and store warning into profile."""
+    
     global pending_actions
     data = request.json or {}
     server_id = data.get('serverId')
@@ -4731,7 +4777,7 @@ def api_players_warn():
 @login_required
 @require_permission('can_control_server')
 def api_players_kick():
-    """Kick a player by serverID."""
+    
     global pending_actions
     data = request.json or {}
     server_id = data.get('serverId')
@@ -4762,7 +4808,7 @@ def api_players_kick():
 @login_required
 @admin_required
 def api_players_ban():
-    """Ban a player by IP and/or name."""
+    
     global pending_actions
     data = request.json or {}
     server_id = data.get('serverId')
@@ -4837,7 +4883,7 @@ def api_players_ban():
 @login_required
 @admin_required
 def api_players_bans_list():
-    """Get list of all bans."""
+    
     return jsonify({'bans': load_bans()})
 
 
@@ -4845,7 +4891,7 @@ def api_players_bans_list():
 @login_required
 @admin_required
 def api_players_bans_remove():
-    """Remove a ban by index."""
+    
     data = request.json or {}
     index = data.get('index')
 
@@ -4867,7 +4913,7 @@ def api_players_bans_remove():
 @login_required
 @require_permission('can_send_commands')
 def api_players_message():
-    """Send a chat message to a specific player or broadcast."""
+    
     global pending_actions
     data = request.json or {}
     server_id = data.get('serverId')
@@ -4901,7 +4947,7 @@ def api_players_message():
 @login_required
 @require_permission('can_view_dashboard')
 def api_status():
-    """Get server status"""
+    
     sync_server_state_with_system()
     return jsonify({
         'running': server_state['running'],
@@ -4918,35 +4964,35 @@ def api_status():
 @login_required
 @require_permission('can_control_server')
 def api_start():
-    """Start server"""
+    
     return jsonify(start_server(session['username']))
 
 @app.route('/api/stop', methods=['POST'])
 @login_required
 @require_permission('can_control_server')
 def api_stop():
-    """Stop server"""
+    
     return jsonify(stop_server(session['username']))
 
 @app.route('/api/restart', methods=['POST'])
 @login_required
 @require_permission('can_control_server')
 def api_restart():
-    """Restart server (runs in background, returns immediately)"""
+    
     return jsonify(restart_server(session['username']))
 
 @app.route('/api/console')
 @login_required
 @require_permission('can_view_console')
 def api_console():
-    """Get console output"""
+    
     return jsonify({'lines': console_lines})
 
 @app.route('/api/command', methods=['POST'])
 @login_required
 @require_permission('can_send_commands')
 def api_command():
-    """Send command to server"""
+    
     global server_process
 
     if not server_state['running']:
@@ -4973,7 +5019,7 @@ def api_command():
 @app.route('/api/config', methods=['GET', 'POST'])
 @admin_required
 def api_config():
-    """Get or update configuration"""
+    
     global config
 
     if request.method == 'GET':
@@ -5095,7 +5141,7 @@ def api_update_start():
 
 @socketio.on('connect')
 def handle_connect():
-    """Handle client connection"""
+    
     if 'username' not in session:
         disconnect()
         return

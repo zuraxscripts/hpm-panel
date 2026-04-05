@@ -1,9 +1,3 @@
-"""
-HappinessMP Server Manager - Single Entry Point
-Handles dependency installation and starts all services.
-Designed to run on Pterodactyl Python egg.
-"""
-
 import argparse
 import json
 import subprocess
@@ -52,7 +46,6 @@ def _resolve_default_panel_port():
 
 
 def install_dependencies():
-    """Install packages from requirements.txt if needed."""
     if not os.path.exists(REQUIREMENTS_FILE):
         print("[WARN] requirements.txt not found, skipping install")
         return
@@ -74,7 +67,6 @@ def install_dependencies():
 
 
 def shutdown(signum=None, frame=None):
-    """Stop all child processes."""
     print("\n[INFO] Stopping services...")
     for proc in processes:
         if proc.poll() is None:

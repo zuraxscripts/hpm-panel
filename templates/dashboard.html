@@ -1804,7 +1804,7 @@
   <div class="ws-overlay" id="wsOverlay">
     <div class="ws-card">
       <div class="title">Not responding</div>
-      <div class="desc" id="wsOverlayDesc">Realtime connection lost. Trying to reconnectâ€¦</div>
+      <div class="desc" id="wsOverlayDesc">Realtime connection lost. Trying to reconnect...</div>
       <div class="hint">Please wait. Requests are paused.</div>
     </div>
   </div>
@@ -2717,10 +2717,10 @@
       fetchStatus(true);
     });
     socket.on('disconnect', () => {
-      showWsOverlay('Realtime connection lost. Trying to reconnectâ€¦');
+      showWsOverlay('Realtime connection lost. Trying to reconnect...');
     });
     socket.on('connect_error', () => {
-      showWsOverlay('Cannot reach panel websocket. Retryingâ€¦');
+      showWsOverlay('Cannot reach panel websocket. Retrying…');
     });
     let currentUser = null;
     let profileDraft = { display_name: '', avatar: '', avatar_url: '' };

@@ -1,7 +1,3 @@
-"""
-Updater for HappinessMP Panel + Server files.
-"""
-
 import argparse
 import json
 import os
