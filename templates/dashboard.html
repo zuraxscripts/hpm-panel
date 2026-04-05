@@ -2102,7 +2102,15 @@
               <button class="btnx primary prominent" id="btnSaveDiscordConfig"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="discord_save_settings">Save Discord Settings</span></button>
             </div>
             <div class="cardx-body" id="discordConfigForm">
-              <div id="discordConfigLoading" style="color:var(--muted);text-align:center;padding:20px;" data-i18n="loading_discord_config">Loading discord config...</div>
+              <div class="settings-layout">
+                <div class="settings-col settings-col-wide">
+                  <div class="settings-section">
+                    <div class="settings-section-body">
+                      <div id="discordConfigLoading" style="color:var(--muted);text-align:center;padding:20px;" data-i18n="loading_discord_config">Loading discord config...</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -4356,24 +4364,24 @@
     async function loadPanelConfig() {
       const form = document.getElementById('panelConfigForm');
       const discordForm = document.getElementById('discordConfigForm');
-      form.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('loading_panel_config','Loading panel config...')}</div>`;
+      form.innerHTML = settingsStateHtml(t('loading_panel_config','Loading panel config...'));
       if(discordForm){
-        discordForm.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('loading_discord_config','Loading discord config...')}</div>`;
+        discordForm.innerHTML = settingsStateHtml(t('loading_discord_config','Loading discord config...'));
       }
       try {
         const res = await fetch('/api/panel-config');
         if(res.status === 401) return (window.location.href = '/login');
         if(res.status === 403){
-          form.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('admin_access_required','Admin access required.')}</div>`;
+          form.innerHTML = settingsStateHtml(t('admin_access_required','Admin access required.'));
           if(discordForm){
-            discordForm.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('admin_access_required','Admin access required.')}</div>`;
+            discordForm.innerHTML = settingsStateHtml(t('admin_access_required','Admin access required.'));
           }
           return;
         }
         if (!res.ok) {
-          form.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('panel_config_load_failed','Failed to load panel config.')}</div>`;
+          form.innerHTML = settingsStateHtml(t('panel_config_load_failed','Failed to load panel config.'));
           if(discordForm){
-            discordForm.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('discord_config_load_failed','Failed to load discord config.')}</div>`;
+            discordForm.innerHTML = settingsStateHtml(t('discord_config_load_failed','Failed to load discord config.'));
           }
           return;
         }
@@ -4387,9 +4395,9 @@
         panelConfigDirty = false;
         discordConfigDirty = false;
       } catch(e) {
-        form.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('panel_config_load_error','Error loading panel config.')}</div>`;
+        form.innerHTML = settingsStateHtml(t('panel_config_load_error','Error loading panel config.'));
         if(discordForm){
-          discordForm.innerHTML = `<div style="color:var(--muted);text-align:center;padding:20px;">${t('discord_config_load_error','Error loading discord config.')}</div>`;
+          discordForm.innerHTML = settingsStateHtml(t('discord_config_load_error','Error loading discord config.'));
         }
       }
     }
@@ -4582,6 +4590,20 @@
         <div class="discord-status-badge">
           <span class="dot ${running && !blocked && !hasErr ? 'on' : ''}"></span>
           <span>${escapeHtml(label)}</span>
+        </div>
+      `;
+    }
+
+    function settingsStateHtml(message){
+      return `
+        <div class="settings-layout">
+          <div class="settings-col settings-col-wide">
+            <div class="settings-section">
+              <div class="settings-section-body">
+                <div style="color:var(--muted);text-align:center;padding:20px;">${escapeHtml(message || t('loading','Loading...'))}</div>
+              </div>
+            </div>
+          </div>
         </div>
       `;
     }

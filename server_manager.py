@@ -22,6 +22,7 @@ import urllib.request
 import tempfile
 import re
 import stat
+import logging
 import xml.etree.ElementTree as ET
 from io import BytesIO
 from datetime import datetime, timedelta
@@ -52,8 +53,39 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return str(raw).strip().lower() in ('1', 'true', 'yes', 'on')
 
 
+def _env_str(name: str, default: str = '') -> str:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return str(raw).strip()
+
+
 FORCE_HTTPS = _env_bool('PANEL_FORCE_HTTPS', False)
 SESSION_COOKIE_SECURE = _env_bool('PANEL_SESSION_COOKIE_SECURE', FORCE_HTTPS)
+PANEL_PRODUCTION_MODE = _env_bool('PANEL_PRODUCTION', True)
+PANEL_ACCESS_LOGS = _env_bool('PANEL_ACCESS_LOGS', not PANEL_PRODUCTION_MODE)
+PANEL_SOCKETIO_ASYNC_MODE = _env_str('PANEL_SOCKETIO_ASYNC_MODE', '').lower()
+
+
+def _resolve_socketio_async_mode():
+    requested = PANEL_SOCKETIO_ASYNC_MODE
+    is_windows = (os.name == 'nt')
+
+    if requested in ('threading', 'eventlet'):
+        if requested == 'eventlet':
+            if is_windows:
+                return 'threading', 'eventlet_disabled_windows'
+            try:
+                import eventlet  # noqa: F401
+                return 'eventlet', 'forced_eventlet'
+            except Exception:
+                return 'threading', 'eventlet_missing'
+        return 'threading', 'forced_threading'
+
+    return 'threading', 'default_threading'
+
+
+SOCKETIO_ASYNC_MODE, SOCKETIO_ASYNC_REASON = _resolve_socketio_async_mode()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(32)
@@ -61,7 +93,19 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024                      
 app.config['SESSION_COOKIE_SECURE'] = SESSION_COOKIE_SECURE
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-socketio = SocketIO(app)
+socketio = SocketIO(
+    app,
+    async_mode=SOCKETIO_ASYNC_MODE,
+    logger=False,
+    engineio_logger=False,
+    ping_interval=25,
+    ping_timeout=30
+)
+
+if PANEL_PRODUCTION_MODE and not PANEL_ACCESS_LOGS:
+    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.setLevel(logging.ERROR)
+    werkzeug_logger.propagate = False
 
                                                          
 _login_attempts = {}                                               
@@ -5202,12 +5246,36 @@ if __name__ == '__main__':
     print(
         f"""
 =======================================================
-  HappinessMP Server Manager - Pterodactyl Style
+  HappinessMP Server Manager
 
   Access: http://0.0.0.0:{PANEL_PORT}
+  Mode: {'production' if PANEL_PRODUCTION_MODE else 'development'}
+  Backend: {SOCKETIO_ASYNC_MODE} ({SOCKETIO_ASYNC_REASON})
+  Access logs: {'enabled' if PANEL_ACCESS_LOGS else 'disabled'}
 
 {setup_hint}=======================================================
 """
     )
 
-    socketio.run(app, host='0.0.0.0', port=PANEL_PORT, debug=False, allow_unsafe_werkzeug=True)
+    use_unsafe_werkzeug = (SOCKETIO_ASYNC_MODE == 'threading')
+    if PANEL_PRODUCTION_MODE and use_unsafe_werkzeug:
+        if SOCKETIO_ASYNC_REASON == 'eventlet_disabled_windows':
+            print('[INFO] Windows detected: using threading backend for Socket.IO stability.')
+        elif SOCKETIO_ASYNC_REASON == 'default_threading' and os.name == 'nt':
+            print('[INFO] Windows detected: using threading backend for Socket.IO stability.')
+        elif SOCKETIO_ASYNC_REASON == 'eventlet_missing':
+            print('[WARN] eventlet not available; falling back to threading/Werkzeug backend.')
+        elif SOCKETIO_ASYNC_REASON == 'forced_threading':
+            print('[INFO] PANEL_SOCKETIO_ASYNC_MODE=threading is active.')
+        else:
+            print(f'[INFO] Socket.IO backend fallback: {SOCKETIO_ASYNC_REASON}.')
+
+    socketio.run(
+        app,
+        host='0.0.0.0',
+        port=PANEL_PORT,
+        debug=not PANEL_PRODUCTION_MODE,
+        use_reloader=False,
+        log_output=PANEL_ACCESS_LOGS,
+        allow_unsafe_werkzeug=use_unsafe_werkzeug
+    )

@@ -6,3 +6,4 @@ werkzeug==3.0.1
 PyMySQL==1.1.0
 cryptography==42.0.5
 discord.py==2.4.0
+simple-websocket==1.0.0
