@@ -1,6 +1,6 @@
-# HappinessMP Panel
+# [HappinessMP](https://happinessmp.net/) Panel
 
-Web-based management panel for **HappinessMP** servers.
+Web-based management panel for [HappinessMP](https://happinessmp.net/) servers.
 
 It provides a browser UI for starting and stopping the server, live console access, file management, player management, resource and addon control, scheduled restarts, update checks, multi-user access, and Discord integration.
 
@@ -23,7 +23,7 @@ If you already use **Pterodactyl Panel**, that is the recommended way to deploy 
 
 ## Features
 
-- Web control panel for HappinessMP
+- Web control panel for [HappinessMP](https://happinessmp.net/)
 - Start, stop, and restart server actions
 - Live console with command input
 - File manager with upload, download, edit, rename, delete, compress, and extract actions
@@ -32,10 +32,10 @@ If you already use **Pterodactyl Panel**, that is the recommended way to deploy 
 - Player list, player profiles, warnings, kick, ban, and direct messages
 - User accounts with roles and permissions
 - Admin action logs
-- Built-in update checker for the panel and HappinessMP server files
+- Built-in update checker for the panel and [HappinessMP](https://happinessmp.net/) server files
 - Optional Discord bot and status embed integration
 - Automatic first-run setup wizard
-- Automatic download of the Linux HappinessMP server package during setup
+- Automatic download of the Linux [HappinessMP](https://happinessmp.net/) server package during setup
 - Automatic installation of `hpm-connector` during setup
 
 ## Requirements
@@ -69,7 +69,7 @@ During setup, the panel will:
 
 1. Save and validate the database connection
 2. Create the required database tables
-3. Download the HappinessMP Linux server package
+3. Download the [HappinessMP](https://happinessmp.net/) Linux server package
 4. Install the latest `hpm-connector`
 5. Update the connector configuration with the panel secret
 6. Create your first admin account
@@ -238,7 +238,7 @@ Use:
 
 ```ini
 [Unit]
-Description=HappinessMP Panel
+Description=HMP Panel
 After=network.target mariadb.service
 
 [Service]
@@ -346,20 +346,18 @@ If the `HAPPINESS_DB_*` variables are set, the panel can load database settings 
 
 ## Important Files and Directories
 
-```text
-main.py                      Launcher
-server_manager.py            Main web panel server
-updater.py                   Built-in updater worker
-requirements.txt             Python dependencies
-egg-hmp-happinessmp.json     Pterodactyl egg
-panel_config.json            Panel configuration
-update_config.json           Update source configuration
-happiness_update.json        HappinessMP update metadata
-data/                        Runtime data, logs, DB config, update state
-HPNMP/                       Downloaded HappinessMP server files
-templates/                   HTML templates and static assets
-locales/                     UI translations
-```
+- [`main.py`](./main.py) - Launcher
+- [`server_manager.py`](./server_manager.py) - Main web panel server
+- [`updater.py`](./updater.py) - Built-in updater worker
+- [`requirements.txt`](./requirements.txt) - Python dependencies
+- [`egg-hmp-happinessmp.json`](./egg-hmp-happinessmp.json) - Pterodactyl egg
+- `panel_config.json` - Panel configuration
+- [`update_config.json`](./update_config.json) - Update source configuration
+- [`happiness_update.json`](./happiness_update.json) - [HappinessMP](https://happinessmp.net/) update metadata
+- `data/` - Runtime data, logs, DB config, update state
+- `HPNMP/` - Downloaded [HappinessMP](https://happinessmp.net/) server files
+- [`templates/`](./templates) - HTML templates and static assets
+- [`locales/`](./locales) - UI translations
 
 ## Default Paths
 
@@ -403,14 +401,14 @@ After the server starts, open the allocated port in your browser and complete th
 - Not supported on Windows nodes
 - Not supported on ARM nodes
 - The panel still needs a working MySQL/MariaDB database
-- The first setup still needs outbound internet access to download HappinessMP files and `hpm-connector`
+- The first setup still needs outbound internet access to download [HappinessMP](https://happinessmp.net/) files and `hpm-connector`
 
 ## Updating
 
 The panel includes an update system for:
 
 - The panel itself
-- HappinessMP server files
+- [HappinessMP](https://happinessmp.net/) server files
 
 By default, update metadata is read from:
 
@@ -477,4 +475,4 @@ That is not supported for this project.
 
 ## Notes
 
-This repository is focused on HappinessMP server management on Linux. If you want the easiest deployment path and already use Pterodactyl, use the included egg and keep the panel behind proper network rules.
+This repository is focused on [HappinessMP](https://happinessmp.net/) server management on Linux. If you want the easiest deployment path and already use Pterodactyl, use the included egg and keep the panel behind proper network rules.
