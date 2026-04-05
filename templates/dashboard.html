@@ -1347,6 +1347,23 @@
     .player-row-enter{
       animation:listFadeIn .2s ease-out;
     }
+    .players-section-label{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      margin:6px 2px 8px;
+      font-size:12px;
+      color:var(--muted);
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      font-weight:700;
+    }
+    .players-section-label i{
+      margin-right:6px;
+      color:var(--text);
+      opacity:.85;
+    }
 
     .warn-banner{
       padding:10px 14px;border-radius:14px;
@@ -2129,23 +2146,52 @@
             </div>
           </div>
           <div class="cardx-body">
-            <div class="table-wrap">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th style="width:14%;"><span data-i18n="players_col_id">ID</span></th>
-                    <th style="width:20%;"><span data-i18n="players_col_name">Name</span></th>
-                    <th style="width:10%;"><span data-i18n="players_col_ping">Ping</span></th>
-                    <th style="width:10%;"><span data-i18n="players_col_session">Session</span></th>
-                    <th style="width:10%;"><span data-i18n="players_col_active">Active</span></th>
-                    <th style="width:16%;"><span>Last Seen</span></th>
-                    <th style="width:20%;text-align:right;"><span data-i18n="players_col_actions">Actions</span></th>
-                  </tr>
-                </thead>
-                <tbody id="playersList">
-                  <tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);" data-i18n="players_empty">No players connected.</td></tr>
-                </tbody>
-              </table>
+            <div id="playersTablesWrap">
+              <div class="players-section-label">
+                <span><i class="fa-solid fa-signal"></i> <span data-i18n="players_section_online">Players On Server</span></span>
+                <span id="playerCountOnlineBadge" class="badgeX" style="font-size:11px;padding:3px 8px;">0</span>
+              </div>
+              <div class="table-wrap" style="margin-bottom:10px;">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th style="width:14%;"><span data-i18n="players_col_id">ID</span></th>
+                      <th style="width:20%;"><span data-i18n="players_col_name">Name</span></th>
+                      <th style="width:10%;"><span data-i18n="players_col_ping">Ping</span></th>
+                      <th style="width:10%;"><span data-i18n="players_col_session">Session</span></th>
+                      <th style="width:10%;"><span data-i18n="players_col_active">Active</span></th>
+                      <th style="width:16%;"><span data-i18n="players_col_last_seen">Last Seen</span></th>
+                      <th style="width:20%;text-align:right;"><span data-i18n="players_col_actions">Actions</span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="playersOnlineList">
+                    <tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);" data-i18n="players_empty_online">No players on server.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="players-section-label">
+                <span><i class="fa-solid fa-database"></i> <span data-i18n="players_section_saved">Saved Players (Database)</span></span>
+                <span id="playerCountSavedBadge" class="badgeX" style="font-size:11px;padding:3px 8px;">0</span>
+              </div>
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th style="width:14%;"><span data-i18n="players_col_id">ID</span></th>
+                      <th style="width:20%;"><span data-i18n="players_col_name">Name</span></th>
+                      <th style="width:10%;"><span data-i18n="players_col_ping">Ping</span></th>
+                      <th style="width:10%;"><span data-i18n="players_col_session">Session</span></th>
+                      <th style="width:10%;"><span data-i18n="players_col_active">Active</span></th>
+                      <th style="width:16%;"><span data-i18n="players_col_last_seen">Last Seen</span></th>
+                      <th style="width:20%;text-align:right;"><span data-i18n="players_col_actions">Actions</span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="playersSavedList">
+                    <tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);" data-i18n="players_empty_saved">No saved players yet.</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
             <div class="form-hint" style="margin-top:10px;">
               <span data-i18n="players_sync_hint_1">Player data syncs every 5 seconds via the</span> <strong>panel-connector</strong> <span data-i18n="players_sync_hint_2">resource.</span>
@@ -5626,11 +5672,42 @@
         .join('||');
     }
 
-    function setPlayerCounters(count){
+    function splitPlayersBySource(players){
+      const online = [];
+      const saved = [];
+      (Array.isArray(players) ? players : []).forEach((p) => {
+        if(p && p.online) online.push(p);
+        else saved.push(p);
+      });
+      return {
+        online,
+        saved,
+        total: online.length + saved.length
+      };
+    }
+
+    function setPlayerCounters(input){
+      const counts = {
+        total: 0,
+        online: 0,
+        saved: 0
+      };
+      if(typeof input === 'number'){
+        counts.total = input;
+        counts.online = input;
+      } else if(input && typeof input === 'object'){
+        counts.total = Number(input.total || 0);
+        counts.online = Number(input.online || 0);
+        counts.saved = Number(input.saved || 0);
+      }
       const countEl = document.getElementById('playerCount');
-      if(countEl) countEl.textContent = count;
+      if(countEl) countEl.textContent = counts.online;
       const badgeEl = document.getElementById('playerCountBadge');
-      if(badgeEl) badgeEl.textContent = count;
+      if(badgeEl) badgeEl.textContent = counts.total;
+      const onlineBadge = document.getElementById('playerCountOnlineBadge');
+      if(onlineBadge) onlineBadge.textContent = counts.online;
+      const savedBadge = document.getElementById('playerCountSavedBadge');
+      if(savedBadge) savedBadge.textContent = counts.saved;
     }
 
     let activePlayerProfile = null;
@@ -5911,9 +5988,15 @@
     }
 
     function renderPlayersRows(players, opts = {}){
-      const body = document.getElementById('playersList');
+      const onlineBody = document.getElementById('playersOnlineList');
+      const savedBody = document.getElementById('playersSavedList');
       const list = Array.isArray(players) ? players : [];
-      setPlayerCounters(list.length);
+      const split = splitPlayersBySource(list);
+      setPlayerCounters({
+        total: split.total,
+        online: split.online.length,
+        saved: split.saved.length
+      });
 
       const nextSignature = playersPayloadSignature(list);
       if(!opts.force && playersSignature === nextSignature){
@@ -5921,53 +6004,66 @@
       }
       playersSignature = nextSignature;
 
-      if(list.length === 0) {
-        body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);">${t('players_empty','No players connected.')}</td></tr>`;
-        return true;
-      }
-
-      body.innerHTML = '';
-      list.forEach(p => {
-        const tr = document.createElement('tr');
-        if(opts.animate) tr.classList.add('player-row-enter');
-        const isOnline = !!p.online;
-        const activeClass = isOnline ? 'success' : 'warn';
-        const activeLabel = isOnline ? t('admin_yes','Yes') : t('admin_no','No');
-        const isAdmin = currentUser && currentUser.role === 'admin';
-        const canKick = currentUser && (currentUser.role === 'admin' || (currentUser.permissions && currentUser.permissions.can_control_server));
-        const canSend = currentUser && (currentUser.role === 'admin' || (currentUser.permissions && currentUser.permissions.can_send_commands));
-        const sid = (p.serverId !== undefined && p.serverId !== null && String(p.serverId).trim() !== '')
-          ? String(p.serverId)
-          : '';
-        const playerId = String(p.playerId || '').trim() || sid;
-        const lastSeen = formatIsoDateTime(p.last_connection || '');
-
-        let actionsHtml = '<div class="file-actions">';
-        actionsHtml += `<button class="btnx sm" data-player-act="info" data-player-id="${escapeHtml(playerId)}" title="${t('players_profile_open','Player Profile')}"><i class="fa-solid fa-circle-info"></i></button>`;
-        if(canKick && isOnline && sid) {
-          actionsHtml += `<button class="btnx sm warning" data-player-act="kick" data-sid="${escapeHtml(sid)}" data-name="${escapeHtml(p.name)}"><i class="fa-solid fa-shoe-prints"></i> ${t('btn_kick','Kick')}</button>`;
+      const renderTableRows = (body, rows, emptyText) => {
+        if(!body) return;
+        if(rows.length === 0){
+          body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);">${emptyText}</td></tr>`;
+          return;
         }
-        if(isAdmin) {
-          actionsHtml += `<button class="btnx sm danger" data-player-act="ban" data-player-id="${escapeHtml(playerId)}" data-sid="${escapeHtml(sid)}" data-name="${escapeHtml(p.name)}"><i class="fa-solid fa-gavel"></i> ${t('btn_ban','Ban')}</button>`;
-        }
-        if(canSend && isOnline && sid){
-          actionsHtml += `<button class="btnx sm" data-player-act="msg" data-sid="${escapeHtml(sid)}" data-name="${escapeHtml(p.name)}" title="${t('btn_message','Message')}"><i class="fa-solid fa-comment"></i></button>`;
-        }
-        actionsHtml += '</div>';
+        body.innerHTML = '';
+        rows.forEach((p) => {
+          const tr = document.createElement('tr');
+          if(opts.animate) tr.classList.add('player-row-enter');
+          const isOnline = !!p.online;
+          const activeClass = isOnline ? 'success' : 'warn';
+          const activeLabel = isOnline ? t('admin_yes','Yes') : t('admin_no','No');
+          const isAdmin = currentUser && currentUser.role === 'admin';
+          const canKick = currentUser && (currentUser.role === 'admin' || (currentUser.permissions && currentUser.permissions.can_control_server));
+          const canSend = currentUser && (currentUser.role === 'admin' || (currentUser.permissions && currentUser.permissions.can_send_commands));
+          const sid = (p.serverId !== undefined && p.serverId !== null && String(p.serverId).trim() !== '')
+            ? String(p.serverId)
+            : '';
+          const playerId = String(p.playerId || '').trim() || sid;
+          const lastSeen = formatIsoDateTime(p.last_connection || '');
 
-        tr.innerHTML = `
-          <td style="font-weight:600;font-family:ui-monospace,monospace;">${escapeHtml(playerId)}</td>
-          <td><i class="fa-solid fa-user" style="color:var(--primary);margin-right:6px;"></i>${escapeHtml(p.name)}</td>
-          <td>${isOnline ? `${p.ping || 0} ms` : '-'}</td>
-          <td>${isOnline ? (p.session ?? 0) : '-'}</td>
-          <td><span class="badgeX ${activeClass}" style="font-size:11px;padding:3px 8px;">${activeLabel}</span></td>
-          <td style="font-size:12px;">${escapeHtml(lastSeen)}</td>
-          <td>${actionsHtml}</td>
-        `;
-        body.appendChild(tr);
-      });
+          let actionsHtml = '<div class="file-actions">';
+          actionsHtml += `<button class="btnx sm" data-player-act="info" data-player-id="${escapeHtml(playerId)}" title="${t('players_profile_open','Player Profile')}"><i class="fa-solid fa-circle-info"></i></button>`;
+          if(canKick && isOnline && sid) {
+            actionsHtml += `<button class="btnx sm warning" data-player-act="kick" data-sid="${escapeHtml(sid)}" data-name="${escapeHtml(p.name)}"><i class="fa-solid fa-shoe-prints"></i> ${t('btn_kick','Kick')}</button>`;
+          }
+          if(isAdmin) {
+            actionsHtml += `<button class="btnx sm danger" data-player-act="ban" data-player-id="${escapeHtml(playerId)}" data-sid="${escapeHtml(sid)}" data-name="${escapeHtml(p.name)}"><i class="fa-solid fa-gavel"></i> ${t('btn_ban','Ban')}</button>`;
+          }
+          if(canSend && isOnline && sid){
+            actionsHtml += `<button class="btnx sm" data-player-act="msg" data-sid="${escapeHtml(sid)}" data-name="${escapeHtml(p.name)}" title="${t('btn_message','Message')}"><i class="fa-solid fa-comment"></i></button>`;
+          }
+          actionsHtml += '</div>';
 
-      body.querySelectorAll('button[data-player-act]').forEach(btn => {
+          tr.innerHTML = `
+            <td style="font-weight:600;font-family:ui-monospace,monospace;">${escapeHtml(playerId)}</td>
+            <td><i class="fa-solid fa-user" style="color:var(--primary);margin-right:6px;"></i>${escapeHtml(p.name)}</td>
+            <td>${isOnline ? `${p.ping || 0} ms` : '-'}</td>
+            <td>${isOnline ? (p.session ?? 0) : '-'}</td>
+            <td><span class="badgeX ${activeClass}" style="font-size:11px;padding:3px 8px;">${activeLabel}</span></td>
+            <td style="font-size:12px;">${escapeHtml(lastSeen)}</td>
+            <td>${actionsHtml}</td>
+          `;
+          body.appendChild(tr);
+        });
+      };
+
+      renderTableRows(
+        onlineBody,
+        split.online,
+        t('players_empty_online','No players on server.')
+      );
+      renderTableRows(
+        savedBody,
+        split.saved,
+        t('players_empty_saved','No saved players yet.')
+      );
+
+      document.querySelectorAll('#playersOnlineList button[data-player-act], #playersSavedList button[data-player-act]').forEach(btn => {
         btn.addEventListener('click', async () => {
           const act = btn.getAttribute('data-player-act');
           const sidRaw = String(btn.getAttribute('data-sid') || '').trim();
@@ -6053,22 +6149,34 @@
 
     async function loadPlayers(opts = {}) {
       if(!opts.noFade){
-        return refreshWithFade('playersList', () => loadPlayers({ noFade: true, force: true }));
+        return refreshWithFade('playersTablesWrap', () => loadPlayers({ noFade: true, force: true }));
       }
-      const body = document.getElementById('playersList');
+      const onlineBody = document.getElementById('playersOnlineList');
+      const savedBody = document.getElementById('playersSavedList');
       try {
         const res = await fetch('/api/players');
         if(res.status === 401) return (window.location.href = '/login');
         if(res.status === 403) {
           playersSignature = '';
-          body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);">${t('error_no_permission','Permission denied')}</td></tr>`;
+          const html = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);">${t('error_no_permission','Permission denied')}</td></tr>`;
+          if(onlineBody) onlineBody.innerHTML = html;
+          if(savedBody) savedBody.innerHTML = html;
+          setPlayerCounters({ total: 0, online: 0, saved: 0 });
           return;
         }
         const data = await res.json();
-        renderPlayersRows(data.players || [], { force: !!opts.force, animate: !!opts.animate });
+        let list = Array.isArray(data.players) ? data.players : [];
+        if(list.length === 0 && (Array.isArray(data.online_players) || Array.isArray(data.saved_players))){
+          const onlineRows = (Array.isArray(data.online_players) ? data.online_players : []).map(p => ({ ...p, online: true }));
+          const savedRows = (Array.isArray(data.saved_players) ? data.saved_players : []).map(p => ({ ...p, online: false }));
+          list = [...onlineRows, ...savedRows];
+        }
+        renderPlayersRows(list, { force: !!opts.force, animate: !!opts.animate });
       } catch(e) {
         playersSignature = '';
-        body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);">${t('players_load_failed','Failed to load players.')}</td></tr>`;
+        const html = `<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--muted);">${t('players_load_failed','Failed to load players.')}</td></tr>`;
+        if(onlineBody) onlineBody.innerHTML = html;
+        if(savedBody) savedBody.innerHTML = html;
       }
     }
 
@@ -6168,8 +6276,22 @@
     }
 
     socket.on('players_update', (data) => {
-      const players = data.players || [];
-      setPlayerCounters(players.length);
+      let players = Array.isArray(data.players) ? data.players : [];
+      if(players.length === 0 && (Array.isArray(data.online_players) || Array.isArray(data.saved_players))){
+        const onlineRows = (Array.isArray(data.online_players) ? data.online_players : []).map(p => ({ ...p, online: true }));
+        const savedRows = (Array.isArray(data.saved_players) ? data.saved_players : []).map(p => ({ ...p, online: false }));
+        players = [...onlineRows, ...savedRows];
+      }
+      const onlineCount = Array.isArray(data.online_players)
+        ? data.online_players.length
+        : players.filter(p => p && p.online).length;
+      const savedCount = Array.isArray(data.saved_players)
+        ? data.saved_players.length
+        : Math.max(0, players.length - onlineCount);
+      const totalCount = (data.counts && Number.isFinite(Number(data.counts.total)))
+        ? Number(data.counts.total)
+        : players.length;
+      setPlayerCounters({ total: totalCount, online: onlineCount, saved: savedCount });
       if(currentPage === 'players') {
         renderPlayersRows(players, { animate: true });
       }

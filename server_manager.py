@@ -780,6 +780,22 @@ def _build_players_listing():
     return rows
 
 
+def _players_payload(rows=None):
+    payload_rows = rows if isinstance(rows, list) else _build_players_listing()
+    online_rows = [row for row in payload_rows if bool(row.get('online'))]
+    saved_rows = [row for row in payload_rows if not bool(row.get('online'))]
+    return {
+        'players': payload_rows,
+        'online_players': online_rows,
+        'saved_players': saved_rows,
+        'counts': {
+            'total': len(payload_rows),
+            'online': len(online_rows),
+            'saved': len(saved_rows)
+        }
+    }
+
+
 def _profile_matching_bans(profile, player_row=None):
     ip_candidates = set()
     name_candidates = set()
@@ -4468,7 +4484,7 @@ def api_panel_hook_player_join():
 
     panel_connector_last_heartbeat = time.time()
     socketio.emit('player_join', data)
-    socketio.emit('players_update', {'players': _build_players_listing()})
+    socketio.emit('players_update', _players_payload())
     discord_runtime.request_status_refresh(force=False)
 
     if banned:
@@ -4494,7 +4510,7 @@ def api_panel_hook_player_disconnect():
 
     panel_connector_last_heartbeat = time.time()
     socketio.emit('player_disconnect', data)
-    socketio.emit('players_update', {'players': _build_players_listing()})
+    socketio.emit('players_update', _players_payload())
     discord_runtime.request_status_refresh(force=False)
     return jsonify({'ok': True})
 
@@ -4533,7 +4549,7 @@ def api_panel_hook_players_sync():
     panel_connector_last_heartbeat = time.time()
     save_player_profiles(player_profiles)
 
-    socketio.emit('players_update', {'players': _build_players_listing()})
+    socketio.emit('players_update', _players_payload())
     if _players_snapshot_signature(connected_players.values()) != prev_sig:
         discord_runtime.request_status_refresh(force=False)
     return jsonify({'ok': True})
@@ -4590,7 +4606,7 @@ def api_panel_hook_pending_actions():
 @require_permission('can_view_players')
 def api_players_list():
     """Get list of known players (online and offline)."""
-    return jsonify({'players': _build_players_listing()})
+    return jsonify(_players_payload())
 
 
 @app.route('/api/players/profile/<server_id>')
