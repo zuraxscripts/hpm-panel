@@ -15,7 +15,6 @@ DATA_DIR.mkdir(exist_ok=True)
 def _default_status_embed_template():
     return {
         "title": "{{serverName}}",
-        "url": "{{serverBrowserUrl}}",
         "description": "",
         "fields": [
             {

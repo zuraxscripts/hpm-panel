@@ -183,7 +183,7 @@
     "panel_scheduled_restarts_placeholder": "HH:MM",
     "panel_config_saved": "Panel configuration saved.",
     "settings_tab_general": "General",
-    "settings_tab_fxserver": "FXServer",
+    "settings_tab_hmpserver": "HMPserver",
     "settings_tab_discord": "Discord",
     "discord_settings_title": "Discord Settings",
     "discord_save_settings": "Save Discord Settings",

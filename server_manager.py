@@ -103,7 +103,6 @@ panel_connector_last_heartbeat = 0.0
 
 DEFAULT_DISCORD_STATUS_EMBED_TEMPLATE = {
     'title': '{{serverName}}',
-    'url': '{{serverBrowserUrl}}',
     'description': '',
     'fields': [
         {
@@ -136,11 +135,11 @@ DEFAULT_DISCORD_STATUS_EMBED_TEMPLATE = {
 }
 
 DEFAULT_DISCORD_STATUS_CONFIG = {
-    'onlineString': '🟢 Online',
+    'onlineString': 'Online',
     'onlineColor': '#0BA70B',
-    'partialString': '🟡 Partial',
+    'partialString': 'Partial',
     'partialColor': '#FFF100',
-    'offlineString': '🔴 Offline',
+    'offlineString': 'Offline',
     'offlineColor': '#A70B28',
     'buttons': []
 }
@@ -591,29 +590,14 @@ def _compute_next_scheduled_restart(times):
 def _resolve_status_state(status_cfg):
     global panel_connector_last_heartbeat
     if not server_state.get('running'):
-        return 'offline', status_cfg.get('offlineString', '🔴 Offline'), _parse_hex_color(status_cfg.get('offlineColor'), 0xA70B28)
+        return 'offline', status_cfg.get('offlineString', 'Offline'), _parse_hex_color(status_cfg.get('offlineColor'), 0xA70B28)
 
     now_ts = time.time()
     age = (now_ts - panel_connector_last_heartbeat) if panel_connector_last_heartbeat else None
     if age is None or age > 90:
-        return 'partial', status_cfg.get('partialString', '🟡 Partial'), _parse_hex_color(status_cfg.get('partialColor'), 0xFFF100)
+        return 'partial', status_cfg.get('partialString', 'Partial'), _parse_hex_color(status_cfg.get('partialColor'), 0xFFF100)
 
-    return 'online', status_cfg.get('onlineString', '🟢 Online'), _parse_hex_color(status_cfg.get('onlineColor'), 0x0BA70B)
-
-
-def _get_server_browser_url(settings):
-    host = str(settings.get('hostaddress') or '').strip()
-    port = settings.get('port')
-    if not host:
-        return ''
-    host = host.replace('http://', '').replace('https://', '').strip('/')
-    try:
-        port_i = int(port)
-    except Exception:
-        port_i = None
-    if port_i and 1 <= port_i <= 65535:
-        return f'http://{host}:{port_i}'
-    return f'http://{host}'
+    return 'online', status_cfg.get('onlineString', 'Online'), _parse_hex_color(status_cfg.get('onlineColor'), 0x0BA70B)
 
 
 def _status_template_context():
@@ -624,8 +608,7 @@ def _status_template_context():
     uptime_seconds = int(time.time() - server_state['start_time']) if server_state.get('start_time') else 0
 
     return {
-        'serverName': settings.get('hostname') or panel_config.get('panel_name') or 'HappinessMP Server',
-        'serverBrowserUrl': _get_server_browser_url(settings),
+        'serverName': settings.get('hostname') or 'HappinessMP Server',
         'statusString': status_string,
         'serverClients': len(connected_players),
         'serverMaxClients': settings.get('maxplayers') or 0,
@@ -633,6 +616,29 @@ def _status_template_context():
         'uptime': _format_uptime_short(uptime_seconds),
         '_status_color': status_color
     }
+
+
+def _status_refresh_signature():
+    """Build a stable signature used to avoid unnecessary Discord API updates."""
+    settings = parse_settings_xml() or {}
+    discord_cfg = _get_discord_config()
+    status_cfg = _parse_discord_status_config(discord_cfg)
+    status_key, status_string, status_color = _resolve_status_state(status_cfg)
+    payload = {
+        'serverName': settings.get('hostname') or 'HappinessMP Server',
+        'statusKey': status_key,
+        'statusString': status_string,
+        'statusColor': status_color,
+        'serverClients': len(connected_players),
+        'serverMaxClients': settings.get('maxplayers') or 0,
+        'nextScheduledRestart': _compute_next_scheduled_restart(panel_config.get('scheduled_restarts') or []),
+        'statusEmbedJson': str(discord_cfg.get('status_embed_json') or ''),
+        'statusConfigJson': str(discord_cfg.get('status_config_json') or '')
+    }
+    try:
+        return json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
+    except Exception:
+        return str(payload)
 
 
 def _apply_template_values(value, mapping):
@@ -660,17 +666,12 @@ def _build_status_embed_for_discord():
 
     title = str(rendered.get('title') or '')[:256]
     description = str(rendered.get('description') or '')[:4096]
-    url = str(rendered.get('url') or '').strip()
-    if url and not re.match(r'^https?://', url, re.IGNORECASE):
-        url = ''
 
     embed = discord.Embed(
         title=title or None,
         description=description or None,
         color=status_color
     )
-    if url:
-        embed.url = url
 
     fields = rendered.get('fields')
     if isinstance(fields, list):
@@ -783,6 +784,8 @@ class PanelDiscordBotClient(discord.Client if discord is not None else object):
         self.tree.add_command(self.status_group, guild=discord.Object(id=self.guild_id))
         self._status_task = None
         self._admin_permission_blocked = False
+        self._status_update_event = asyncio.Event()
+        self._last_status_signature = None
 
     async def on_ready(self):
         self.runtime.set_running(True)
@@ -823,6 +826,7 @@ class PanelDiscordBotClient(discord.Client if discord is not None else object):
 
         if self._status_task is None or self._status_task.done():
             self._status_task = asyncio.create_task(self._status_update_loop())
+        self.request_status_refresh(force=True)
 
     async def close(self):
         try:
@@ -836,63 +840,103 @@ class PanelDiscordBotClient(discord.Client if discord is not None else object):
             pass
         await super().close()
 
+    def request_status_refresh(self, force=False):
+        if force:
+            self._last_status_signature = None
+        if self._status_update_event is not None:
+            self._status_update_event.set()
+
     async def _status_add_command(self, interaction):
-        if self._admin_permission_blocked:
-            await interaction.response.send_message('Bot nemôže mať admin práva.', ephemeral=True)
-            return
+        try:
+            if self._admin_permission_blocked:
+                await interaction.response.send_message('The bot cannot run with Administrator permission.', ephemeral=True)
+                return
 
-        if interaction.guild_id != self.guild_id:
-            await interaction.response.send_message('Tento command je povolený iba v nakonfigurovanom guild/serveri.', ephemeral=True)
-            return
+            if interaction.guild_id != self.guild_id:
+                await interaction.response.send_message('This command is allowed only in the configured guild/server.', ephemeral=True)
+                return
 
-        if interaction.channel is None:
-            await interaction.response.send_message('Neplatný channel.', ephemeral=True)
-            return
+            if interaction.channel is None:
+                await interaction.response.send_message('Invalid channel.', ephemeral=True)
+                return
 
-        guild = interaction.guild
-        member = None
-        if guild and self.user:
-            member = guild.me
+            guild = interaction.guild
+            member = None
+            if guild and self.user:
+                member = guild.me
+                if member is None:
+                    try:
+                        member = await guild.fetch_member(self.user.id)
+                    except Exception:
+                        member = None
+
             if member is None:
-                try:
-                    member = await guild.fetch_member(self.user.id)
-                except Exception:
-                    member = None
+                await interaction.response.send_message('Failed to load bot permissions.', ephemeral=True)
+                return
 
-        if member is None:
-            await interaction.response.send_message('Nepodarilo sa načítať bot oprávnenia.', ephemeral=True)
-            return
+            perms = interaction.channel.permissions_for(member)
+            is_thread = isinstance(interaction.channel, discord.Thread)
+            can_send = perms.send_messages_in_threads if is_thread else perms.send_messages
+            if not can_send:
+                await interaction.response.send_message('The bot is missing "Send Messages" permission in this channel.', ephemeral=True)
+                return
+            if not perms.embed_links:
+                await interaction.response.send_message('The bot is missing "Embed Links" permission in this channel.', ephemeral=True)
+                return
 
-        perms = interaction.channel.permissions_for(member)
-        if not perms.send_messages:
-            await interaction.response.send_message('Bot nemá oprávnenie "Send Messages" v tomto channeli.', ephemeral=True)
-            return
+            embed = _build_status_embed_for_discord()
+            view = _build_status_view_for_discord()
+            if embed is None:
+                await interaction.response.send_message('Discord runtime is not available.', ephemeral=True)
+                return
 
-        embed = _build_status_embed_for_discord()
-        view = _build_status_view_for_discord()
-        if embed is None:
-            await interaction.response.send_message('Discord runtime nie je dostupný.', ephemeral=True)
-            return
-
-        await interaction.response.defer(ephemeral=True)
-        msg = await interaction.channel.send(embed=embed, view=view)
-        _upsert_discord_status_message(interaction.channel_id, msg.id)
-        await interaction.followup.send('Status embed bol pridaný. Automatický refresh je aktívny.', ephemeral=True)
+            await interaction.response.defer(ephemeral=True)
+            msg = await interaction.channel.send(embed=embed, view=view)
+            threading.Thread(
+                target=_upsert_discord_status_message,
+                args=(interaction.channel_id, msg.id),
+                daemon=True
+            ).start()
+            self._last_status_signature = _status_refresh_signature()
+            await interaction.followup.send('Status embed has been added. Auto-refresh is active.', ephemeral=True)
+        except Exception as e:
+            self.runtime.set_error(f'/status add failed: {e}')
+            add_console_line(f'[Discord] /status add failed: {e}')
+            try:
+                if interaction.response.is_done():
+                    await interaction.followup.send(
+                        'Failed to add status embed. Check bot permissions (Send Messages + Embed Links).',
+                        ephemeral=True
+                    )
+                else:
+                    await interaction.response.send_message(
+                        'Failed to add status embed. Check bot permissions (Send Messages + Embed Links).',
+                        ephemeral=True
+                    )
+            except Exception:
+                pass
 
     async def _status_update_loop(self):
         while not self.is_closed():
             try:
+                try:
+                    await asyncio.wait_for(self._status_update_event.wait(), timeout=15)
+                except asyncio.TimeoutError:
+                    pass
+                self._status_update_event.clear()
                 await self._refresh_status_embeds()
             except asyncio.CancelledError:
                 raise
             except Exception as e:
                 self.runtime.set_error(f'Status embed refresh failed: {e}')
-            await asyncio.sleep(30)
 
     async def _refresh_status_embeds(self):
         cfg = _get_discord_config()
         entries = list(cfg.get('status_messages', []))
         if not entries:
+            return
+        signature = _status_refresh_signature()
+        if signature == self._last_status_signature:
             return
         embed = _build_status_embed_for_discord()
         view = _build_status_view_for_discord()
@@ -916,6 +960,7 @@ class PanelDiscordBotClient(discord.Client if discord is not None else object):
                 continue
             except Exception:
                 continue
+        self._last_status_signature = signature
 
 
 class DiscordRuntimeManager:
@@ -1061,6 +1106,24 @@ class DiscordRuntimeManager:
             self._thread = None
             self._running = False
             self._admin_permission_blocked = False
+
+    def request_status_refresh(self, force=False):
+        with self._lock:
+            loop = self._loop
+            client = self._client
+        if loop is None or client is None:
+            return
+
+        def _trigger():
+            try:
+                client.request_status_refresh(force=force)
+            except Exception:
+                return
+
+        try:
+            loop.call_soon_threadsafe(_trigger)
+        except Exception:
+            return
 
     def send_warning(self, message):
         text = str(message or '').strip()
@@ -1523,6 +1586,7 @@ def sync_server_state_with_system(emit_change=False):
 
     if emit_change and prev_running != bool(server_state.get('running')):
         socketio.emit('server_status', {'running': bool(server_state.get('running'))})
+        discord_runtime.request_status_refresh(force=True)
 
     return bool(server_state.get('running'))
 
@@ -1550,7 +1614,7 @@ def start_server(username):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             stdin=subprocess.PIPE,
-            bufsize=1
+            bufsize=-1
         )
 
         server_state['running'] = True
@@ -1570,7 +1634,8 @@ def start_server(username):
 
         add_console_line(f'=== SERVER STARTED BY {username.upper()} ===', username)
         add_console_line(f'PID: {server_process.pid}', username)
-        discord_runtime.send_warning(f'🟢 Server started by {username}')
+        discord_runtime.send_warning(f'[ONLINE] Server started by {username}')
+        discord_runtime.request_status_refresh(force=True)
 
         log_user_action(username, 'START_SERVER', f'PID: {server_process.pid}')
 
@@ -1631,7 +1696,8 @@ def stop_server(username):
 
         add_console_line('=== SERVER STOPPED ===', username)
         log_user_action(username, 'STOP_SERVER', 'Success')
-        discord_runtime.send_warning(f'🔴 Server stopped by {username}')
+        discord_runtime.send_warning(f'[OFFLINE] Server stopped by {username}')
+        discord_runtime.request_status_refresh(force=True)
 
         socketio.emit('server_status', {'running': False})
 
@@ -1646,7 +1712,7 @@ def restart_server(username):
     add_console_line(f'=== RESTARTING SERVER BY {username.upper()} ===', username)
     server_state['restart_count'] += 1
     log_user_action(username, 'RESTART_SERVER', f'Count: {server_state["restart_count"]}')
-    discord_runtime.send_warning(f'🟡 Server restart requested by {username}')
+    discord_runtime.send_warning(f'[RESTART] Server restart requested by {username}')
 
     def _do_restart():
         stop_server(username)
@@ -1737,7 +1803,7 @@ def scheduled_restart_thread():
                     _last_scheduled_restart_minute = current_minute
                     add_console_line(f'=== SCHEDULED RESTART ({current_hhmm}) ===')
                     log_user_action('SYSTEM', 'SCHEDULED_RESTART', current_hhmm)
-                    discord_runtime.send_warning(f'🟠 Scheduled restart triggered ({current_hhmm})')
+                    discord_runtime.send_warning(f'[SCHEDULED] Scheduled restart triggered ({current_hhmm})')
                     restart_server('SYSTEM')
         except Exception:
             pass
@@ -2819,6 +2885,7 @@ def api_set_panel_config():
     save_panel_config(panel_config)
     if discord_changed:
         discord_runtime.sync_from_config(force=True)
+    discord_runtime.request_status_refresh(force=True)
 
     log_payload = dict(data)
     log_payload.pop('panel_secret', None)
@@ -2894,6 +2961,7 @@ def api_set_settings():
 
         data.pop('admin_password', None)
         write_settings_xml(data)
+        discord_runtime.request_status_refresh(force=True)
 
         log_payload = dict(data)
         log_payload.pop('secret', None)
@@ -3649,6 +3717,7 @@ def api_panel_hook_player_join():
     panel_connector_last_heartbeat = time.time()
     socketio.emit('player_join', data)
     socketio.emit('players_update', {'players': list(connected_players.values())})
+    discord_runtime.request_status_refresh(force=False)
 
     if banned:
         return jsonify({'ok': True, 'banned': True, 'reason': ban_info.get('reason', 'Banned')})
@@ -3671,6 +3740,7 @@ def api_panel_hook_player_disconnect():
     panel_connector_last_heartbeat = time.time()
     socketio.emit('player_disconnect', data)
     socketio.emit('players_update', {'players': list(connected_players.values())})
+    discord_runtime.request_status_refresh(force=False)
     return jsonify({'ok': True})
 
 
@@ -3691,10 +3761,13 @@ def api_panel_hook_players_sync():
             row = dict(p)
             row['ip'] = normalize_player_ip(row.get('ip', ''))
             new_players[sid] = row
+    prev_count = len(connected_players)
     connected_players = new_players
     panel_connector_last_heartbeat = time.time()
 
     socketio.emit('players_update', {'players': list(connected_players.values())})
+    if len(connected_players) != prev_count:
+        discord_runtime.request_status_refresh(force=False)
     return jsonify({'ok': True})
 
 
@@ -3720,8 +3793,12 @@ def api_panel_hook_heartbeat():
     if not _check_panel_secret():
         return jsonify({'error': 'Invalid secret'}), 403
     data = request.json or {}
-    panel_connector_last_heartbeat = time.time()
+    now_ts = time.time()
+    was_stale = (not panel_connector_last_heartbeat) or ((now_ts - panel_connector_last_heartbeat) > 90)
+    panel_connector_last_heartbeat = now_ts
     socketio.emit('panel_heartbeat', data)
+    if was_stale:
+        discord_runtime.request_status_refresh(force=True)
     return jsonify({'ok': True})
 
 
