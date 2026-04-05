@@ -150,6 +150,58 @@
       color:var(--text);
       white-space:nowrap;
     }
+    .panel-version-card{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-top:10px;
+      margin-bottom:8px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background:
+        radial-gradient(220px 80px at 12% 0%, rgba(79,70,229,.16), transparent 60%),
+        rgba(0,0,0,.24);
+      box-shadow: 0 10px 28px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.03);
+    }
+    .panel-version-left{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+    .panel-version-icon{
+      width:30px;
+      height:30px;
+      border-radius:10px;
+      display:grid;
+      place-items:center;
+      border:1px solid rgba(79,70,229,.45);
+      background: rgba(79,70,229,.18);
+      color:#c7d2fe;
+      flex:0 0 auto;
+    }
+    .panel-version-meta{
+      line-height:1.15;
+      min-width:0;
+    }
+    .panel-version-key{
+      font-size:11px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .panel-version-val{
+      margin-top:2px;
+      font-size:13px;
+      font-weight:700;
+      color:var(--text);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:180px;
+    }
 
     .nav{
       display:flex; flex-direction:column; gap:8px;
@@ -920,6 +972,163 @@
       }
     }
 
+    .player-profile-modal{
+      width:min(980px, 100%);
+      max-height:92vh;
+    }
+    .player-profile-layout{
+      display:grid;
+      grid-template-columns: 190px 1fr;
+      min-height:420px;
+    }
+    .player-profile-side{
+      border-right:1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.28);
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .player-profile-tab{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color:var(--text);
+      border-radius:10px;
+      padding:9px 10px;
+      font-size:14px;
+      font-weight:650;
+      text-align:left;
+      cursor:pointer;
+      transition: border-color .12s ease, background .12s ease;
+    }
+    .player-profile-tab:hover{ border-color: rgba(79,70,229,.45); }
+    .player-profile-tab.active{
+      border-color: rgba(79,70,229,.7);
+      background: rgba(79,70,229,.22);
+    }
+    .player-profile-main{
+      padding:16px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-width:0;
+    }
+    .player-profile-state{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:29px;
+      font-weight:800;
+      margin-bottom:4px;
+    }
+    .player-profile-state .off{ color:#f87171; }
+    .player-profile-state .on{ color:#4ade80; }
+    .player-profile-sub{
+      color:var(--muted);
+      font-size:12px;
+      margin-top:-6px;
+    }
+    .player-profile-grid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap:8px 14px;
+    }
+    .player-profile-item{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:0;
+    }
+    .player-profile-k{
+      color:var(--muted);
+      font-size:12px;
+      font-weight:650;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+    .player-profile-v{
+      font-size:16px;
+      font-weight:700;
+      color:var(--text);
+      word-break:break-word;
+    }
+    .player-profile-tags{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    .player-profile-note{
+      width:100%;
+      min-height:120px;
+      resize:vertical;
+    }
+    .player-profile-panel{
+      display:none;
+    }
+    .player-profile-panel.active{
+      display:block;
+      animation: fadeIn .16s ease-out;
+    }
+    .player-history-list,.player-ident-list{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      max-height:320px;
+      overflow:auto;
+      padding-right:4px;
+    }
+    .player-history-item,.player-ident-item{
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      padding:9px 10px;
+      background: rgba(0,0,0,.22);
+    }
+    .player-history-head,.player-ident-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .player-history-type{
+      font-weight:700;
+      color:var(--text);
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      font-size:11px;
+    }
+    .player-history-details,.player-ident-val{
+      margin-top:4px;
+      font-size:13px;
+      word-break:break-word;
+      color:var(--text);
+    }
+    .player-profile-footer{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:auto;
+      padding-top:10px;
+      border-top:1px solid rgba(255,255,255,.08);
+    }
+    .player-profile-footer .actions{
+      width:auto;
+    }
+    @media (max-width: 980px){
+      .player-profile-layout{ grid-template-columns:1fr; }
+      .player-profile-side{
+        border-right:none;
+        border-bottom:1px solid rgba(255,255,255,.08);
+        flex-direction:row;
+        flex-wrap:wrap;
+      }
+      .player-profile-tab{ flex:1 1 calc(50% - 4px); }
+      .player-profile-grid{ grid-template-columns:1fr; }
+    }
+
     .form-group{ margin-bottom:12px; }
     .form-label{ color: var(--muted); font-size:12px; font-weight:650; margin-bottom:6px; display:block; }
     .form-hint{ color: var(--muted); font-size:12px; margin-top:6px; }
@@ -933,6 +1142,9 @@
       display:flex;
       flex-direction:column;
       gap:12px;
+    }
+    .settings-col-wide{
+      grid-column: span 12;
     }
     .settings-section{
       border:1px solid rgba(255,255,255,.08);
@@ -988,19 +1200,58 @@
       flex-direction:column;
       gap:8px;
     }
-    .discord-json{
+    textarea.inputx.discord-json{
       width:100%;
-      min-height:220px;
+      min-height:500px;
+      height:54vh;
+      max-height:82vh;
       resize:vertical;
       font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-      font-size:12px;
+      font-size:13px;
       line-height:1.5;
       white-space:pre;
+    }
+    textarea.inputx.discord-json.discord-json--embed{
+      min-height:650px;
+      height:66vh;
+    }
+    textarea.inputx.discord-json.discord-json--config{
+      min-height:520px;
+      height:56vh;
     }
     .discord-json-actions{
       display:flex;
       flex-wrap:wrap;
       gap:8px;
+    }
+    .discord-hints{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin-top:8px;
+    }
+    .discord-hint-item{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      padding:8px 10px;
+      background: rgba(0,0,0,.18);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .discord-hint-item code{
+      color:var(--text);
+      font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-size:12px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:8px;
+      padding:2px 6px;
+      white-space:normal;
+      word-break:break-word;
+      flex:0 0 auto;
     }
     .discord-status-badge{
       display:inline-flex;
@@ -1412,6 +1663,19 @@
       .topbar .actions{justify-content:flex-end;}
       .modal-content-custom{width:100% !important;max-height:95vh;}
       .settings-col{ grid-column: span 12; }
+      textarea.inputx.discord-json{
+        min-height:340px;
+        height:44vh;
+        max-height:none;
+      }
+      textarea.inputx.discord-json.discord-json--embed{
+        min-height:460px;
+        height:56vh;
+      }
+      textarea.inputx.discord-json.discord-json--config{
+        min-height:360px;
+        height:46vh;
+      }
     }
     @media (max-width: 720px){
       .cardx-header{padding:12px;align-items:flex-start;}
@@ -1428,6 +1692,18 @@
       .logs-filters{flex-direction:column;align-items:stretch;}
       .logs-filters .select-wrap{width:100%;}
       .logs-filters .select-wrap .inputx{width:100% !important;}
+      textarea.inputx.discord-json{
+        min-height:280px;
+        height:40vh;
+      }
+      textarea.inputx.discord-json.discord-json--embed{
+        min-height:360px;
+        height:50vh;
+      }
+      textarea.inputx.discord-json.discord-json--config{
+        min-height:300px;
+        height:42vh;
+      }
     }
     @media (max-width: 560px){
       .stat-grid{grid-template-columns: 1fr;}
@@ -1510,11 +1786,22 @@
         <div class="nav-item" data-page="console"><i class="fa-solid fa-terminal"></i> <span data-i18n="nav_console">Console</span></div>
         <div class="nav-item" data-page="files"><i class="fa-solid fa-folder-open"></i> <span data-i18n="nav_files">Files</span></div>
         <div class="nav-item" data-page="resources" id="resourcesNav" style="display:none;"><i class="fa-solid fa-puzzle-piece"></i> <span data-i18n="nav_resources">Resources</span></div>
+        <div class="nav-item" data-page="addons" id="addonsNav" style="display:none;"><i class="fa-solid fa-cubes"></i> <span data-i18n="nav_addons">Addons</span></div>
         <div class="nav-item" data-page="settings" id="settingsNav" style="display:none;"><i class="fa-solid fa-gear"></i> <span data-i18n="nav_settings">Settings</span></div>
         <div class="nav-item" data-page="logs"><i class="fa-solid fa-file-lines"></i> <span data-i18n="nav_logs">Logs</span></div>
         <div class="nav-item" data-page="players"><i class="fa-solid fa-users"></i> <span data-i18n="nav_players">Players</span></div>
         <div class="nav-item" data-page="admin" id="adminNav" style="display:none;"><i class="fa-solid fa-shield"></i> <span data-i18n="nav_admin">Admin</span></div>
       </nav>
+
+      <div class="panel-version-card">
+        <div class="panel-version-left">
+          <div class="panel-version-icon"><i class="fa-solid fa-code-branch"></i></div>
+          <div class="panel-version-meta">
+            <div class="panel-version-key" data-i18n="panel_version_label">Panel Version</div>
+            <div class="panel-version-val" id="panelVersionValue">v-</div>
+          </div>
+        </div>
+      </div>
 
       <div class="user-card" style="margin-bottom:8px;">
         <div class="user-left">
@@ -1891,6 +2178,27 @@
       </section>
 
       
+      <section class="page-section" id="pageAddons">
+        <div class="cardx" style="margin-bottom:14px;">
+          <div class="cardx-header">
+            <div class="cardx-title"><i class="fa-solid fa-cubes"></i> <span data-i18n="card_addons">Addons</span></div>
+            <button class="btnx" id="btnRefreshAddons"><i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="btn_refresh">Refresh</span></button>
+          </div>
+          <div class="cardx-body">
+            <div class="resources-grid" id="addonsList">
+              <div class="resources-empty" data-i18n="loading">Loading...</div>
+            </div>
+            <div class="form-hint" style="margin-top:10px;">
+              <span data-i18n="addons_hint_1">Addons configured in settings.xml are auto-started with the server.</span>
+              <span data-i18n="addons_hint_2">Use Start to load addons at runtime.</span>
+              <span data-i18n="addons_hint_3">Addons are loaded from</span> <strong>/addons/</strong>.
+              <span data-i18n="addons_hint_4">Stopping/restarting addons requires full server restart.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      
       <section class="page-section" id="pageAdmin">
         <div class="cardx">
           <div class="cardx-header">
@@ -2225,6 +2533,88 @@
     </div>
   </div>
 
+  <div class="modal-custom" id="playerProfileModal">
+    <div class="modal-content-custom player-profile-modal">
+      <div class="modal-header-custom">
+        <h3 class="modal-title-custom" id="playerProfileTitle"><span data-i18n="players_profile_title">Player Profile</span></h3>
+        <button class="modal-close" id="btnClosePlayerProfile"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body-custom" style="padding:0;">
+        <div class="player-profile-layout">
+          <aside class="player-profile-side">
+            <button class="player-profile-tab active" data-pp-tab="info"><i class="fa-solid fa-circle-info"></i> <span data-i18n="players_profile_tab_info">Info</span></button>
+            <button class="player-profile-tab" data-pp-tab="history"><i class="fa-solid fa-clock-rotate-left"></i> <span data-i18n="players_profile_tab_history">History</span></button>
+            <button class="player-profile-tab" data-pp-tab="ids"><i class="fa-solid fa-list-ul"></i> <span data-i18n="players_profile_tab_ids">IDs</span></button>
+            <button class="player-profile-tab" data-pp-tab="sanctions"><i class="fa-solid fa-gavel"></i> <span data-i18n="players_profile_tab_sanctions">Sanctions</span></button>
+          </aside>
+          <section class="player-profile-main">
+            <div class="player-profile-panel active" id="ppTabInfo">
+              <div class="player-profile-state" id="ppStateLine">[OFF] -</div>
+              <div class="player-profile-sub" id="ppSubLine">-</div>
+              <div class="player-profile-grid">
+                <div class="player-profile-item">
+                  <div class="player-profile-k" data-i18n="players_profile_playtime">Play Time</div>
+                  <div class="player-profile-v" id="ppPlayTime">-</div>
+                </div>
+                <div class="player-profile-item">
+                  <div class="player-profile-k" data-i18n="players_profile_join_date">Join Date</div>
+                  <div class="player-profile-v" id="ppJoinDate">-</div>
+                </div>
+                <div class="player-profile-item">
+                  <div class="player-profile-k" data-i18n="players_profile_last_connection">Last Connection</div>
+                  <div class="player-profile-v" id="ppLastConnection">-</div>
+                </div>
+                <div class="player-profile-item">
+                  <div class="player-profile-k" data-i18n="players_profile_sanctions">Sanctions</div>
+                  <div class="player-profile-tags">
+                    <span class="badgeX" id="ppWarnCount">0 Warns</span>
+                    <span class="badgeX" id="ppBanCount">0 Bans</span>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group" style="margin-top:10px;">
+                <label class="form-label" data-i18n="players_profile_notes">Notes</label>
+                <textarea class="inputx player-profile-note" id="ppNotes" placeholder="Type your notes about the player." data-i18n-placeholder="players_profile_notes_placeholder"></textarea>
+                <div class="form-hint" id="ppNotesMeta">-</div>
+                <div style="margin-top:8px;">
+                  <button class="btnx sm primary" id="btnSavePlayerNotes"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="btn_save">Save</span></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="player-profile-panel" id="ppTabHistory">
+              <div class="player-history-list" id="ppHistoryList"></div>
+            </div>
+
+            <div class="player-profile-panel" id="ppTabIds">
+              <div class="player-ident-list" id="ppIdentifiersList"></div>
+            </div>
+
+            <div class="player-profile-panel" id="ppTabSanctions">
+              <div class="form-group">
+                <label class="form-label" data-i18n="players_profile_warn_list">Warnings</label>
+                <div class="player-history-list" id="ppWarnList"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" data-i18n="players_profile_ban_list">Bans</label>
+                <div class="player-history-list" id="ppBanList"></div>
+              </div>
+            </div>
+
+            <div class="player-profile-footer">
+              <div class="actions">
+                <button class="btnx" id="btnPPMessage"><i class="fa-solid fa-envelope"></i> <span data-i18n="btn_message">Message</span></button>
+                <button class="btnx warning" id="btnPPKick"><i class="fa-solid fa-shoe-prints"></i> <span data-i18n="btn_kick">Kick</span></button>
+                <button class="btnx warning" id="btnPPWarn"><i class="fa-solid fa-triangle-exclamation"></i> <span data-i18n="btn_warn">Warn</span></button>
+                <button class="btnx danger" id="btnPPBan"><i class="fa-solid fa-gavel"></i> <span data-i18n="btn_ban">Ban</span></button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast-wrap" id="toastWrap"></div>
 
   <script>
@@ -2301,6 +2691,7 @@
     let updatePoller = null;
     let statusPoller = null;
     let playersSignature = '';
+    let discordSaveInFlight = false;
 
     function defaultDiscordStatusEmbedTemplate(){
       return {
@@ -2309,6 +2700,7 @@
         fields: [
           { name: "> STATUS", value: "```\n{{statusString}}\n```", inline: true },
           { name: "> PLAYERS", value: "```\n{{serverClients}}/{{serverMaxClients}}\n```", inline: true },
+          { name: "> CONNECTED PLAYERS", value: "```\n{{connectedPlayersList}}\n```" },
           { name: "> F8 CONNECT COMMAND", value: "```\nconnect play.xanite.cz\n```" },
           { name: "> NEXT RESTART", value: "```\n{{nextScheduledRestart}}\n```", inline: true },
           { name: "> UPTIME", value: "```\n{{uptime}}\n```", inline: true }
@@ -2379,6 +2771,13 @@
 
     function t(key, fallback) {
       return locale[key] || fallback || key;
+    }
+
+    function setPanelVersionValue(version){
+      const el = document.getElementById('panelVersionValue');
+      if(!el) return;
+      const clean = String(version || '').trim();
+      el.textContent = clean ? `v${clean}` : 'v-';
     }
 
     function formatRole(role) {
@@ -2626,7 +3025,8 @@
       'logs': 'pageLogs',
       'players': 'pagePlayers',
       'admin': 'pageAdmin',
-      'resources': 'pageResources'
+      'resources': 'pageResources',
+      'addons': 'pageAddons'
     };
 
     function setSettingsCategory(cat, force){
@@ -2677,6 +3077,7 @@
       }
       if(pageId === 'logs') loadLogsIndex();
       if(pageId === 'resources') loadResources();
+      if(pageId === 'addons') loadAddons();
       if(pageId === 'players') { loadPlayers(); loadBans(); }
     }
 
@@ -3726,6 +4127,7 @@
         <div class="settings-section-body">`;
 
       const resources = data.resources || [];
+      const addons = data.addons || [];
       html += `<div class="form-group">
         <label class="form-label">${t('settings_resources','Resources')}</label>
         <div class="form-hint" style="margin-top:0;margin-bottom:8px;">${t('settings_resources_hint')}</div>
@@ -3735,6 +4137,18 @@
         <div style="display:flex;gap:8px;margin-top:8px;">
           <input class="inputx" id="newResourceInput" placeholder="${t('settings_resources_add_placeholder','Resource name')}" style="flex:1;" />
           <button class="btnx primary" id="btnAddResource"><i class="fa-solid fa-plus"></i> ${t('btn_add','Add')}</button>
+        </div>
+      </div>`;
+
+      html += `<div class="form-group">
+        <label class="form-label">${t('settings_addons','Addons')}</label>
+        <div class="form-hint" style="margin-top:0;margin-bottom:8px;">${t('settings_addons_hint','Server-side addon scripts to load')}</div>
+        <div class="tag-list" id="addonTags">
+          ${addons.map(a => `<span class="tag">${escapeHtml(a)} <i class="fa-solid fa-xmark tag-remove" data-addon="${escapeHtml(a)}"></i></span>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <input class="inputx" id="newAddonInput" placeholder="${t('settings_addons_add_placeholder','Addon name')}" style="flex:1;" />
+          <button class="btnx primary" id="btnAddAddon"><i class="fa-solid fa-plus"></i> ${t('btn_add','Add')}</button>
         </div>
       </div>`;
 
@@ -3765,10 +4179,19 @@
           btn.closest('.tag').remove();
         });
       });
+      container.querySelectorAll('.tag-remove[data-addon]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          btn.closest('.tag').remove();
+        });
+      });
 
       document.getElementById('btnAddResource').addEventListener('click', () => { addResource(); settingsDirty = true; });
       document.getElementById('newResourceInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { addResource(); settingsDirty = true; }
+      });
+      document.getElementById('btnAddAddon').addEventListener('click', () => { addAddon(); settingsDirty = true; });
+      document.getElementById('newAddonInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { addAddon(); settingsDirty = true; }
       });
 
       container.querySelectorAll('input, select').forEach(el => {
@@ -3793,6 +4216,19 @@
       input.value = '';
     }
 
+    function addAddon() {
+      const input = document.getElementById('newAddonInput');
+      const val = input.value.trim();
+      if (!val) return;
+      const tagList = document.getElementById('addonTags');
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.innerHTML = `${escapeHtml(val)} <i class="fa-solid fa-xmark tag-remove"></i>`;
+      tag.querySelector('.tag-remove').addEventListener('click', () => tag.remove());
+      tagList.appendChild(tag);
+      input.value = '';
+    }
+
     async function saveSettings() {
       const data = {
         hostname: document.getElementById('set_hostname').value,
@@ -3803,7 +4239,8 @@
         episode: parseInt(document.getElementById('set_episode').value) || 0,
         loglevel: parseInt(document.getElementById('set_loglevel').value) || 2,
         chat: document.getElementById('set_chat').classList.contains('on'),
-        resources: []
+        resources: [],
+        addons: []
       };
       if(secretState.settings && secretState.settings.edited){
         const secretVal = (document.getElementById('set_secret').value || '').trim();
@@ -3821,6 +4258,10 @@
       document.querySelectorAll('#resourceTags .tag').forEach(tag => {
         const text = tag.textContent.trim().replace(/\s*$/, '');
         if (text) data.resources.push(text);
+      });
+      document.querySelectorAll('#addonTags .tag').forEach(tag => {
+        const text = tag.textContent.trim().replace(/\s*$/, '');
+        if (text) data.addons.push(text);
       });
 
       const out = await apiPost('/api/settings', data);
@@ -4084,7 +4525,7 @@
       let html = '';
       html += `<div class="settings-layout">`;
 
-      html += `<div class="settings-col">`;
+      html += `<div class="settings-col settings-col-wide">`;
       html += `<div class="settings-section">
         <div class="settings-section-title">${t('discord_section_bot','Discord Bot')}</div>
         <div class="settings-section-body">`;
@@ -4117,14 +4558,32 @@
       html += `<div class="form-hint">${t('discord_status_add_hint','Use /status add in a channel where the bot can send messages to place the live status embed.')}</div>`;
       html += `<div class="form-hint">${t('discord_admin_perm_warning','If the bot has Administrator permission, integration will be blocked for safety.')}</div>`;
       html += `</div></div>`;
-      html += `</div>`;
 
-      html += `<div class="settings-col">`;
+      html += `<div class="settings-section">
+        <div class="settings-section-title">${t('discord_section_template_vars','Template Placeholders')}</div>
+        <div class="settings-section-body">
+          <div class="form-hint">${t('discord_template_vars_hint','Use these placeholders in Status Embed JSON values.')}</div>
+          <div class="discord-hints">
+            <div class="discord-hint-item"><code>{{serverName}}</code><span>${t('discord_var_server_name','Server hostname from settings.xml.')}</span></div>
+            <div class="discord-hint-item"><code>{{statusString}}</code><span>${t('discord_var_status_string','Current status label (Online/Partial/Offline).')}</span></div>
+            <div class="discord-hint-item"><code>{{serverClients}}</code><span>${t('discord_var_server_clients','Number of connected players right now.')}</span></div>
+            <div class="discord-hint-item"><code>{{serverMaxClients}}</code><span>${t('discord_var_server_max_clients','Max player slots from settings.xml.')}</span></div>
+            <div class="discord-hint-item"><code>{{nextScheduledRestart}}</code><span>${t('discord_var_next_restart','Nearest scheduled restart time.')}</span></div>
+            <div class="discord-hint-item"><code>{{uptime}}</code><span>${t('discord_var_uptime','Panel tracked server uptime (short format).')}</span></div>
+            <div class="discord-hint-item"><code>{{connectedPlayersList}}</code><span>${t('discord_var_players_list','Connected nicknames list.')}</span></div>
+            <div class="discord-hint-item"><code>{{connectedPlayersWithPing}}</code><span>${t('discord_var_players_ping','Connected nicknames including ping.')}</span></div>
+            <div class="discord-hint-item"><code>{{connectedPlayersWithId}}</code><span>${t('discord_var_players_id','Connected nicknames including server ID.')}</span></div>
+            <div class="discord-hint-item"><code>{{connectedPlayersDetailed}}</code><span>${t('discord_var_players_detailed','Connected nicknames with server ID and ping.')}</span></div>
+          </div>
+        </div>
+      </div>`;
+
       html += `<div class="settings-section">
         <div class="settings-section-title">${t('discord_section_status_embed','Status Embed JSON')}</div>
         <div class="settings-section-body">`;
+      html += `<div class="form-hint">${t('discord_status_embed_hint','Controls embed structure: title, description, fields, image and thumbnail.')}</div>`;
       html += `<div class="discord-json-wrap">
-        <textarea class="inputx discord-json" id="dc_status_embed_json">${escapeHtml(embedJson)}</textarea>
+        <textarea class="inputx discord-json discord-json--embed" id="dc_status_embed_json">${escapeHtml(embedJson)}</textarea>
         <div class="discord-json-actions">
           <button class="btnx sm" id="btnDiscordEmbedDiscard">${t('btn_discard_changes','Discard Changes')}</button>
           <button class="btnx sm" id="btnDiscordEmbedReset">${t('btn_reset_default','Reset to Default')}</button>
@@ -4135,8 +4594,14 @@
       html += `<div class="settings-section">
         <div class="settings-section-title">${t('discord_section_status_config','Status Config JSON')}</div>
         <div class="settings-section-body">`;
+      html += `<div class="form-hint">${t('discord_status_config_hint','Controls state labels/colors and optional link buttons.')}</div>`;
+      html += `<div class="discord-hints">
+        <div class="discord-hint-item"><code>onlineString / partialString / offlineString</code><span>${t('discord_cfg_state_strings','Texts used by {{statusString}} for each state.')}</span></div>
+        <div class="discord-hint-item"><code>onlineColor / partialColor / offlineColor</code><span>${t('discord_cfg_state_colors','Embed color per state (#RRGGBB).')}</span></div>
+        <div class="discord-hint-item"><code>buttons</code><span>${t('discord_cfg_buttons','Array of up to 5 URL buttons: label, url, optional emoji.')}</span></div>
+      </div>`;
       html += `<div class="discord-json-wrap">
-        <textarea class="inputx discord-json" id="dc_status_config_json">${escapeHtml(statusCfgJson)}</textarea>
+        <textarea class="inputx discord-json discord-json--config" id="dc_status_config_json">${escapeHtml(statusCfgJson)}</textarea>
         <div class="discord-json-actions">
           <button class="btnx sm" id="btnDiscordCfgDiscard">${t('btn_discard_changes','Discard Changes')}</button>
           <button class="btnx sm" id="btnDiscordCfgReset">${t('btn_reset_default','Reset to Default')}</button>
@@ -4198,43 +4663,49 @@
     }
 
     async function saveDiscordConfig() {
-      const tokenInput = document.getElementById('dc_token');
-      const guildId = (document.getElementById('dc_guild_id').value || '').trim();
-      const warningsChannelId = (document.getElementById('dc_warnings_channel_id').value || '').trim();
-      const embedRaw = document.getElementById('dc_status_embed_json').value || '';
-      const statusCfgRaw = document.getElementById('dc_status_config_json').value || '';
+      if(discordSaveInFlight) return;
+      discordSaveInFlight = true;
+      try {
+        const tokenInput = document.getElementById('dc_token');
+        const guildId = (document.getElementById('dc_guild_id').value || '').trim();
+        const warningsChannelId = (document.getElementById('dc_warnings_channel_id').value || '').trim();
+        const embedRaw = document.getElementById('dc_status_embed_json').value || '';
+        const statusCfgRaw = document.getElementById('dc_status_config_json').value || '';
 
-      const parsedEmbed = parseJsonOrError(embedRaw, t('discord_section_status_embed','Status Embed JSON'));
-      if(!parsedEmbed) return;
-      const parsedCfg = parseJsonOrError(statusCfgRaw, t('discord_section_status_config','Status Config JSON'));
-      if(!parsedCfg) return;
+        const parsedEmbed = parseJsonOrError(embedRaw, t('discord_section_status_embed','Status Embed JSON'));
+        if(!parsedEmbed) return;
+        const parsedCfg = parseJsonOrError(statusCfgRaw, t('discord_section_status_config','Status Config JSON'));
+        if(!parsedCfg) return;
 
-      const idPattern = /^\d{10,32}$/;
-      if(guildId && !idPattern.test(guildId)){
-        toast('error', t('discord_guild_id','Guild/Server ID'), t('discord_id_invalid','Invalid Discord ID format.'));
-        return;
-      }
-      if(warningsChannelId && !idPattern.test(warningsChannelId)){
-        toast('error', t('discord_warnings_channel_id','Warnings Channel ID'), t('discord_id_invalid','Invalid Discord ID format.'));
-        return;
-      }
+        const idPattern = /^\d{10,32}$/;
+        if(guildId && !idPattern.test(guildId)){
+          toast('error', t('discord_guild_id','Guild/Server ID'), t('discord_id_invalid','Invalid Discord ID format.'));
+          return;
+        }
+        if(warningsChannelId && !idPattern.test(warningsChannelId)){
+          toast('error', t('discord_warnings_channel_id','Warnings Channel ID'), t('discord_id_invalid','Invalid Discord ID format.'));
+          return;
+        }
 
-      const payload = {
-        enabled: document.getElementById('dc_enabled').classList.contains('on'),
-        token: (tokenInput.value || '').trim(),
-        guild_id: guildId,
-        warnings_channel_id: warningsChannelId,
-        status_embed_json: embedRaw,
-        status_config_json: statusCfgRaw
-      };
+        const payload = {
+          enabled: document.getElementById('dc_enabled').classList.contains('on'),
+          token: (tokenInput.value || '').trim(),
+          guild_id: guildId,
+          warnings_channel_id: warningsChannelId,
+          status_embed_json: embedRaw,
+          status_config_json: statusCfgRaw
+        };
 
-      const out = await apiPost('/api/panel-config', { discord: payload });
-      if (out.success) {
-        discordConfigDirty = false;
-        toast('success', t('discord_settings_title','Discord Settings'), t('discord_config_saved','Discord configuration saved.'));
-        await loadPanelConfig();
-      } else {
-        toast('error', t('discord_settings_title','Discord Settings'), out.message || t('error_failed','Failed'));
+        const out = await apiPost('/api/panel-config', { discord: payload });
+        if (out.success) {
+          discordConfigDirty = false;
+          toast('success', t('discord_settings_title','Discord Settings'), t('discord_config_saved','Discord configuration saved.'));
+          await loadPanelConfig();
+        } else {
+          toast('error', t('discord_settings_title','Discord Settings'), out.message || t('error_failed','Failed'));
+        }
+      } finally {
+        discordSaveInFlight = false;
       }
     }
 
@@ -4638,6 +5109,7 @@
           document.getElementById('adminNav').style.display = '';
           document.getElementById('settingsNav').style.display = '';
           document.getElementById('resourcesNav').style.display = '';
+          document.getElementById('addonsNav').style.display = '';
           document.getElementById('permPill').textContent = t('perm_admin','Admin');
         } else {
           const p = data.permissions || {};
@@ -4645,6 +5117,7 @@
           document.getElementById('permPill').textContent = `${t('perm_label','Perms')}: ${enabled}`;
 
           if(p.can_manage_resources) document.getElementById('resourcesNav').style.display = '';
+          if(p.can_manage_resources) document.getElementById('addonsNav').style.display = '';
           if(p.can_view_settings) document.getElementById('settingsNav').style.display = '';
         }
 
@@ -4657,6 +5130,7 @@
             logs: perms.can_view_logs,
             players: perms.can_view_players,
             resources: perms.can_manage_resources,
+            addons: perms.can_manage_resources,
             settings: perms.can_view_settings
           };
           document.querySelectorAll('.nav-item[data-page]').forEach(item=>{
@@ -4683,6 +5157,8 @@
 
     function applyUpdateState(data){
       updateInfo = data || null;
+      const panelCurrent = (data && data.panel && data.panel.current) ? data.panel.current : '';
+      setPanelVersionValue(panelCurrent);
       renderUpdateBanner();
       const running = !!(data && data.run && data.run.running);
       if(running && !updatePoller){
@@ -4999,6 +5475,95 @@
       }
     }
 
+    async function loadAddons(opts = {}) {
+      if(!opts.noFade){
+        return refreshWithFade('addonsList', () => loadAddons({ noFade: true }));
+      }
+      const body = document.getElementById('addonsList');
+      body.innerHTML = `<div class="resources-empty">${t('loading','Loading...')}</div>`;
+      try {
+        const res = await fetch('/api/addons');
+        if(res.status === 401) return (window.location.href = '/login');
+        if(res.status === 403){
+          body.innerHTML = `<div class="resources-empty">${t('error_no_permission','Permission denied')}</div>`;
+          return;
+        }
+        const data = await res.json();
+        const addons = data.addons || [];
+        if(addons.length === 0){
+          body.innerHTML = `<div class="resources-empty">${t('addons_empty','No addons found.')}</div>`;
+          return;
+        }
+        body.innerHTML = '';
+        addons.forEach(a => {
+          const statusClass = a.status === 'started' ? 'running' : (a.status === 'stopped' ? 'stopped' : 'unknown');
+          const statusLabel = a.status === 'started' ? t('res_started','Started') : (a.status === 'stopped' ? t('res_stopped','Stopped') : t('res_unknown','Unknown'));
+          const configBadge = a.configured ? `<span class="badgeX success" style="font-size:11px;padding:3px 8px;">${t('res_configured','in settings.xml')}</span>` : '';
+          const metaBadge = a.has_meta ? '' : `<span class="badgeX danger" style="font-size:11px;padding:3px 8px;">${t('res_missing_meta','no meta.xml')}</span>`;
+          const canConfigure = currentUser && currentUser.role === 'admin';
+          const loadBtn = (canConfigure && !a.configured)
+            ? `<button class="btnx sm primary" data-addon-act="configure" data-addon="${escapeHtml(a.name)}"><i class="fa-solid fa-plug"></i> <span class="action-label">${t('res_add_settings','Add to settings')}</span></button>`
+            : '';
+          const card = document.createElement('div');
+          card.className = 'resource-card';
+          card.innerHTML = `
+            <div class="resource-head">
+              <div>
+                <div class="resource-title">
+                  <i class="fa-solid fa-cubes" style="color:var(--primary);"></i>
+                  <span class="resource-name">${escapeHtml(a.name)}</span>
+                </div>
+                <div class="resource-status ${statusClass}" style="margin-top:6px;">
+                  <span class="dot"></span> ${statusLabel}
+                </div>
+              </div>
+              <div class="resource-badges">
+                ${configBadge}
+                ${metaBadge}
+              </div>
+            </div>
+            <div class="resource-actions">
+              ${loadBtn}
+              <button class="btnx sm success" data-addon-act="start" data-addon="${escapeHtml(a.name)}" ${a.status === 'started' ? 'disabled' : ''}><i class="fa-solid fa-play"></i> <span class="action-label">${t('btn_start','Start')}</span></button>
+            </div>
+          `;
+          body.appendChild(card);
+        });
+        body.querySelectorAll('button[data-addon-act]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const act = btn.getAttribute('data-addon-act');
+            const name = btn.getAttribute('data-addon');
+            if(act === 'configure'){
+              const ok = await openConfirmModal({
+                title: t('confirm_title','Confirm'),
+                message: t('res_confirm_add','Add {name} to settings.xml?').replace('{name}', name),
+                confirmText: t('res_add_settings','Add to settings'),
+                confirmStyle: 'primary'
+              });
+              if(!ok) return;
+              const out = await apiPost(`/api/addons/${encodeURIComponent(name)}/configure`);
+              if(out.success){
+                toast('success', t('label_addon','Addon'), t('res_added_settings','Added to settings.xml.'));
+                setTimeout(loadAddons, 300);
+              } else {
+                toast('error', t('label_addon','Addon'), out.message || t('error_failed','Failed'));
+              }
+              return;
+            }
+            const out = await apiPost(`/api/addons/${encodeURIComponent(name)}/${act}`);
+            if(out.success) {
+              const msg = t('addon_action_sent','{name} {action} sent').replace('{name}', name).replace('{action}', act);
+              toast('success', t('label_addon','Addon'), msg);
+              setTimeout(loadAddons, 500);
+            }
+            else toast('error', t('label_addon','Addon'), out.message || t('error_failed','Failed'));
+          });
+        });
+      } catch(e) {
+        body.innerHTML = `<div class="resources-empty">${t('addons_load_failed','Failed to load addons.')}</div>`;
+      }
+    }
+
     function normalizePlayerIp(ip){
       const value = String(ip || '').trim();
       if(!value) return '';
@@ -5024,6 +5589,259 @@
       if(countEl) countEl.textContent = count;
       const badgeEl = document.getElementById('playerCountBadge');
       if(badgeEl) badgeEl.textContent = count;
+    }
+
+    let activePlayerProfile = null;
+
+    function formatIsoDateTime(value){
+      if(!value) return '-';
+      const d = new Date(value);
+      if(Number.isNaN(d.getTime())) return String(value);
+      return d.toLocaleString();
+    }
+
+    function setPlayerProfileTab(tab){
+      document.querySelectorAll('.player-profile-tab[data-pp-tab]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-pp-tab') === tab);
+      });
+      const map = {
+        info: 'ppTabInfo',
+        history: 'ppTabHistory',
+        ids: 'ppTabIds',
+        sanctions: 'ppTabSanctions'
+      };
+      Object.keys(map).forEach(k => {
+        const el = document.getElementById(map[k]);
+        if(el) el.classList.toggle('active', k === tab);
+      });
+    }
+
+    function closePlayerProfileModal(){
+      document.getElementById('playerProfileModal').classList.remove('active');
+      activePlayerProfile = null;
+    }
+
+    function renderSimpleList(el, rows, emptyText){
+      if(!el) return;
+      if(!Array.isArray(rows) || rows.length === 0){
+        el.innerHTML = `<div class="logs-empty">${escapeHtml(emptyText || '-')}</div>`;
+        return;
+      }
+      el.innerHTML = rows.join('');
+    }
+
+    function renderPlayerProfile(data){
+      const player = data.player || {};
+      const profile = data.profile || {};
+      const isAdmin = currentUser && currentUser.role === 'admin';
+      const canControl = currentUser && (isAdmin || (currentUser.permissions && currentUser.permissions.can_control_server));
+      const canSend = currentUser && (isAdmin || (currentUser.permissions && currentUser.permissions.can_send_commands));
+
+      activePlayerProfile = {
+        serverId: player.serverId,
+        name: player.name || 'Unknown',
+        ip: normalizePlayerIp(player.ip || '')
+      };
+
+      const on = !!player.online;
+      const state = on ? 'ON' : 'OFF';
+      const stateClass = on ? 'on' : 'off';
+      document.getElementById('playerProfileTitle').textContent = `${player.name || 'Unknown'} #${player.serverId ?? '-'}`;
+      document.getElementById('ppStateLine').innerHTML = `<span class="${stateClass}">[${state}]</span> ${escapeHtml(player.name || 'Unknown')}`;
+      document.getElementById('ppSubLine').textContent = `ID ${player.serverId ?? '-'} | ${player.ping ?? 0} ms | session ${player.session ?? 0}`;
+      document.getElementById('ppPlayTime').textContent = formatUptime(profile.playtime_seconds || 0);
+      document.getElementById('ppJoinDate').textContent = formatIsoDateTime(profile.join_date);
+      document.getElementById('ppLastConnection').textContent = formatIsoDateTime(profile.last_connection);
+
+      const warns = (profile.sanctions && profile.sanctions.warns) || 0;
+      const bans = (profile.sanctions && profile.sanctions.bans) || 0;
+      document.getElementById('ppWarnCount').textContent = `${warns} ${t('players_warns','Warns')}`;
+      document.getElementById('ppBanCount').textContent = `${bans} ${t('players_bans','Bans')}`;
+
+      const notesEl = document.getElementById('ppNotes');
+      notesEl.value = profile.notes || '';
+      notesEl.disabled = !canControl;
+      document.getElementById('ppNotesMeta').textContent = `${t('players_profile_key','Profile')}: ${profile.profile_key || '-'}`;
+      document.getElementById('btnSavePlayerNotes').style.display = canControl ? '' : 'none';
+      document.getElementById('btnPPKick').style.display = canControl ? '' : 'none';
+      document.getElementById('btnPPWarn').style.display = canControl ? '' : 'none';
+      document.getElementById('btnPPBan').style.display = isAdmin ? '' : 'none';
+      document.getElementById('btnPPMessage').style.display = canSend ? '' : 'none';
+
+      const ids = profile.identifiers || {};
+      const idsRows = Object.keys(ids).sort().map(k => `
+        <div class="player-ident-item">
+          <div class="player-ident-head">
+            <span>${escapeHtml(k)}</span>
+          </div>
+          <div class="player-ident-val">${escapeHtml(ids[k])}</div>
+        </div>
+      `);
+      renderSimpleList(document.getElementById('ppIdentifiersList'), idsRows, t('players_ids_empty','No identifiers available.'));
+
+      const historyRows = (profile.history || []).map(h => `
+        <div class="player-history-item">
+          <div class="player-history-head">
+            <span class="player-history-type">${escapeHtml(h.type || 'event')}</span>
+            <span>${escapeHtml(formatIsoDateTime(h.at))}</span>
+          </div>
+          <div class="player-history-details">${escapeHtml(h.details || '-')}</div>
+        </div>
+      `);
+      renderSimpleList(document.getElementById('ppHistoryList'), historyRows, t('players_history_empty','No history yet.'));
+
+      const warnRows = (profile.warnings || []).map(w => `
+        <div class="player-history-item">
+          <div class="player-history-head">
+            <span class="player-history-type">${t('btn_warn','Warn')}</span>
+            <span>${escapeHtml(formatIsoDateTime(w.warned_at))}</span>
+          </div>
+          <div class="player-history-details">${escapeHtml(w.reason || '-')} (${escapeHtml(w.warned_by || '-')})</div>
+        </div>
+      `);
+      renderSimpleList(document.getElementById('ppWarnList'), warnRows, t('players_warns_empty','No warnings.'));
+
+      const banRows = (profile.bans || []).map(b => `
+        <div class="player-history-item">
+          <div class="player-history-head">
+            <span class="player-history-type">${t('btn_ban','Ban')}</span>
+            <span>${escapeHtml(formatIsoDateTime(b.banned_at))}</span>
+          </div>
+          <div class="player-history-details">${escapeHtml(b.reason || '-')} (${escapeHtml(b.banned_by || '-')})</div>
+        </div>
+      `);
+      renderSimpleList(document.getElementById('ppBanList'), banRows, t('players_bans_empty','No bans.'));
+    }
+
+    async function openPlayerProfileModal(serverId){
+      const sid = parseInt(serverId, 10);
+      if(!sid) return;
+      document.getElementById('playerProfileModal').classList.add('active');
+      setPlayerProfileTab('info');
+      document.getElementById('playerProfileTitle').textContent = `${t('loading','Loading...')}`;
+      try{
+        const res = await fetch(`/api/players/profile/${encodeURIComponent(sid)}`);
+        if(res.status === 401) return (window.location.href = '/login');
+        const data = await res.json();
+        if(!res.ok || !data.success){
+          toast('error', t('label_player','Player'), data.message || t('error_failed','Failed'));
+          closePlayerProfileModal();
+          return;
+        }
+        renderPlayerProfile(data);
+      } catch(e){
+        toast('error', t('label_player','Player'), t('error_failed','Failed'));
+        closePlayerProfileModal();
+      }
+    }
+
+    async function saveActivePlayerNotes(){
+      if(!activePlayerProfile || !activePlayerProfile.serverId) return;
+      const notes = document.getElementById('ppNotes').value || '';
+      const out = await apiPost(`/api/players/profile/${encodeURIComponent(activePlayerProfile.serverId)}/notes`, { notes });
+      if(out.success){
+        toast('success', t('label_player','Player'), t('players_notes_saved','Notes saved.'));
+      } else {
+        toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
+      }
+    }
+
+    async function warnActivePlayer(){
+      if(!activePlayerProfile || !activePlayerProfile.serverId) return;
+      const res = await openInputModal({
+        title: t('players_warn_title','Warn Player'),
+        submitText: t('btn_warn','Warn'),
+        field1: {
+          label: t('players_warn_reason_label','Reason'),
+          placeholder: t('players_warn_default','Warning from admin'),
+          value: t('players_warn_default','Warning from admin'),
+          required: true
+        }
+      });
+      if(!res) return;
+      const reason = (res.field1 || '').trim() || t('players_warn_default','Warning from admin');
+      const out = await apiPost('/api/players/warn', { serverId: activePlayerProfile.serverId, reason, duration: 8 });
+      if(out.success){
+        toast('success', t('label_player','Player'), out.message || t('players_warn_sent','Warn queued'));
+        openPlayerProfileModal(activePlayerProfile.serverId);
+      } else {
+        toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
+      }
+    }
+
+    async function kickActivePlayer(){
+      if(!activePlayerProfile || !activePlayerProfile.serverId) return;
+      const res = await openInputModal({
+        title: t('players_kick_title','Kick Player'),
+        submitText: t('btn_kick','Kick'),
+        field1: {
+          label: t('players_kick_reason_label','Reason (optional)'),
+          placeholder: t('players_kick_default','Kicked by admin'),
+          value: t('players_kick_default','Kicked by admin'),
+          required: false
+        }
+      });
+      if(res === null) return;
+      const reason = res.field1 || t('players_kick_default','Kicked by admin');
+      const out = await apiPost('/api/players/kick', { serverId: activePlayerProfile.serverId, reason });
+      if(out.success) toast('success', t('label_player','Player'), out.message || t('players_kick_queued','Kick queued'));
+      else toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
+    }
+
+    async function banActivePlayer(){
+      if(!activePlayerProfile || !activePlayerProfile.serverId) return;
+      const res = await openInputModal({
+        title: t('players_ban_title','Ban Player'),
+        submitText: t('btn_ban','Ban'),
+        field1: {
+          label: t('players_ban_reason_label','Reason'),
+          placeholder: t('players_ban_default','Banned by admin'),
+          value: t('players_ban_default','Banned by admin'),
+          required: true
+        }
+      });
+      if(!res) return;
+      const reason = res.field1 || t('players_ban_default','Banned by admin');
+      const out = await apiPost('/api/players/ban', {
+        serverId: activePlayerProfile.serverId,
+        name: activePlayerProfile.name,
+        ip: activePlayerProfile.ip,
+        reason
+      });
+      if(out.success){
+        toast('success', t('label_player','Player'), out.message || t('players_banned','Banned'));
+        loadBans();
+        openPlayerProfileModal(activePlayerProfile.serverId);
+      } else {
+        toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
+      }
+    }
+
+    async function messageActivePlayer(){
+      if(!activePlayerProfile || !activePlayerProfile.serverId) return;
+      const res = await openInputModal({
+        title: t('players_message_title','Message Player'),
+        submitText: t('btn_send','Send'),
+        field1: {
+          label: t('players_message_label','Message'),
+          placeholder: t('players_message_prompt','Send message to {name}:').replace('{name}', activePlayerProfile.name || 'player'),
+          required: true,
+          multiline: true
+        },
+        field2: {
+          label: t('broadcast_duration_label','Duration (sec)'),
+          placeholder: '5',
+          value: '5',
+          type: 'number',
+          required: false
+        }
+      });
+      if(!res) return;
+      const msg = res.field1;
+      const duration = parseInt(res.field2 || '5', 10) || 5;
+      const out = await apiPost('/api/players/message', { serverId: activePlayerProfile.serverId, message: msg, duration });
+      if(out.success) toast('success', t('label_player','Player'), t('players_message_sent','Message sent'));
+      else toast('error', t('label_player','Player'), out.message || t('error_failed','Failed'));
     }
 
     function renderPlayersRows(players, opts = {}){
@@ -5056,6 +5874,7 @@
           : '-';
 
         let actionsHtml = '<div class="file-actions">';
+        actionsHtml += `<button class="btnx sm" data-player-act="info" data-sid="${escapeHtml(p.serverId)}" title="${t('players_profile_open','Player Profile')}"><i class="fa-solid fa-circle-info"></i></button>`;
         if(canKick) {
           actionsHtml += `<button class="btnx sm warning" data-player-act="kick" data-sid="${escapeHtml(p.serverId)}" data-name="${escapeHtml(p.name)}"><i class="fa-solid fa-shoe-prints"></i> ${t('btn_kick','Kick')}</button>`;
         }
@@ -5083,6 +5902,11 @@
           const sid = parseInt(btn.getAttribute('data-sid'));
           const name = btn.getAttribute('data-name');
           const ip = normalizePlayerIp(btn.getAttribute('data-ip') || '');
+
+          if(act === 'info') {
+            await openPlayerProfileModal(sid);
+            return;
+          }
 
           if(act === 'kick') {
             const res = await openInputModal({
@@ -5423,7 +6247,8 @@
 
     document.getElementById('btnSaveSettings').addEventListener('click', saveSettings);
     document.getElementById('btnSavePanelConfig').addEventListener('click', savePanelConfig);
-    document.getElementById('btnSaveDiscordConfig').addEventListener('click', saveDiscordConfig);
+    const btnSaveDiscordConfig = document.getElementById('btnSaveDiscordConfig');
+    btnSaveDiscordConfig.addEventListener('click', () => runWithLoading(btnSaveDiscordConfig, saveDiscordConfig));
 
     document.getElementById('btnSaveFile').addEventListener('click', saveFileFromEditor);
 
@@ -5451,12 +6276,23 @@
 
     const btnRefreshResources = document.getElementById('btnRefreshResources');
     btnRefreshResources.addEventListener('click', () => runWithLoading(btnRefreshResources, loadResources));
+    const btnRefreshAddons = document.getElementById('btnRefreshAddons');
+    btnRefreshAddons.addEventListener('click', () => runWithLoading(btnRefreshAddons, loadAddons));
 
     const btnRefreshPlayers = document.getElementById('btnRefreshPlayers');
     btnRefreshPlayers.addEventListener('click', () => runWithLoading(btnRefreshPlayers, loadPlayers));
     const btnRefreshBans = document.getElementById('btnRefreshBans');
     btnRefreshBans.addEventListener('click', () => runWithLoading(btnRefreshBans, loadBans));
     document.getElementById('btnBroadcast').addEventListener('click', broadcastMessage);
+    document.getElementById('btnClosePlayerProfile').addEventListener('click', closePlayerProfileModal);
+    document.getElementById('btnSavePlayerNotes').addEventListener('click', saveActivePlayerNotes);
+    document.getElementById('btnPPWarn').addEventListener('click', warnActivePlayer);
+    document.getElementById('btnPPKick').addEventListener('click', kickActivePlayer);
+    document.getElementById('btnPPBan').addEventListener('click', banActivePlayer);
+    document.getElementById('btnPPMessage').addEventListener('click', messageActivePlayer);
+    document.querySelectorAll('.player-profile-tab[data-pp-tab]').forEach(btn => {
+      btn.addEventListener('click', () => setPlayerProfileTab(btn.getAttribute('data-pp-tab')));
+    });
 
     document.getElementById('btnCloseEditUser').addEventListener('click', ()=> document.getElementById('editUserModal').classList.remove('active'));
     document.getElementById('btnCancelEditUser').addEventListener('click', ()=> document.getElementById('editUserModal').classList.remove('active'));
@@ -5528,6 +6364,7 @@
           if (modal.id === 'inputModal') closeInputModal(null);
           else if (modal.id === 'confirmActionModal') closeConfirmModal(false);
           else if (modal.id === 'profileModal') attemptCloseProfileModal();
+          else if (modal.id === 'playerProfileModal') closePlayerProfileModal();
           else modal.classList.remove('active');
         }
       });

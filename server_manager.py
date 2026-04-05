@@ -112,6 +112,9 @@ resource_states = {}
 connected_players = {}                                                                  
 pending_actions = []                                                                        
 panel_connector_last_heartbeat = 0.0
+player_profiles = {}
+PROFILE_HISTORY_LIMIT = 120
+PROFILE_WARN_LIMIT = 200
 
 
 DEFAULT_DISCORD_STATUS_EMBED_TEMPLATE = {
@@ -127,6 +130,10 @@ DEFAULT_DISCORD_STATUS_EMBED_TEMPLATE = {
             'name': '> PLAYERS',
             'value': '```\n{{serverClients}}/{{serverMaxClients}}\n```',
             'inline': True
+        },
+        {
+            'name': '> CONNECTED PLAYERS',
+            'value': '```\n{{connectedPlayersList}}\n```'
         },
         {
             'name': '> F8 CONNECT COMMAND',
@@ -384,6 +391,272 @@ def is_player_banned(ip=None, name=None):
     return False, None
 
 
+def load_player_profiles():
+    try:
+        data = storage.load_player_profiles()
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_player_profiles(profiles):
+    storage.save_player_profiles(profiles if isinstance(profiles, dict) else {})
+
+
+def _now_iso():
+    return datetime.now().isoformat(timespec='seconds')
+
+
+def _safe_int(value, default=0):
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
+def _safe_profile_name(value):
+    name = str(value or '').strip()
+    if not name:
+        return 'Unknown'
+    return name[:64]
+
+
+def _safe_profile_text(value, max_len=2000):
+    return str(value or '').strip()[:max_len]
+
+
+def _normalize_identifier_key(key):
+    k = str(key or '').strip().lower()
+    mapping = {
+        'rockstarid': 'rockstar_id',
+        'rockstar_id': 'rockstar_id',
+        'license': 'license',
+        'license2': 'license2',
+        'steam': 'steam',
+        'discord': 'discord',
+        'xbl': 'xbl',
+        'live': 'live'
+    }
+    return mapping.get(k, re.sub(r'[^a-z0-9_]+', '_', k)[:32] or 'id')
+
+
+def _extract_player_identifiers(player_data):
+    out = {}
+    src = player_data if isinstance(player_data, dict) else {}
+    nested = src.get('identifiers')
+    if isinstance(nested, dict):
+        for k, v in nested.items():
+            val = _safe_profile_text(v, 128)
+            if val:
+                out[_normalize_identifier_key(k)] = val
+
+    for key in ('rockstarId', 'rockstar_id', 'license', 'license2', 'steam', 'discord', 'xbl', 'live'):
+        val = _safe_profile_text(src.get(key), 128)
+        if val:
+            out[_normalize_identifier_key(key)] = val
+
+    return out
+
+
+def _profile_candidate_keys(player_data, identifiers=None):
+    src = player_data if isinstance(player_data, dict) else {}
+    ids = identifiers if isinstance(identifiers, dict) else _extract_player_identifiers(src)
+    candidates = []
+
+    for id_key in ('rockstar_id', 'license', 'license2', 'steam', 'discord'):
+        val = _safe_profile_text(ids.get(id_key), 128)
+        if val:
+            candidates.append(f'{id_key}:{val.lower()}')
+
+    ip = normalize_player_ip(src.get('ip', ''))
+    if ip:
+        candidates.append(f'ip:{ip}')
+
+    name = _safe_profile_name(src.get('name')).lower()
+    if name and name != 'unknown':
+        candidates.append(f'name:{name}')
+
+    sid = str(src.get('serverId') or '').strip()
+    if sid:
+        candidates.append(f'sid:{sid}')
+
+    unique = []
+    seen = set()
+    for key in candidates:
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(key)
+    return unique
+
+
+def _new_player_profile(profile_key):
+    now = _now_iso()
+    return {
+        'profile_key': profile_key,
+        'first_seen_at': now,
+        'last_connection_at': now,
+        'total_playtime_sec': 0,
+        'notes': '',
+        'identifiers': {},
+        'warnings': [],
+        'history': [],
+        'last_name': '',
+        'last_ip': '',
+        'last_server_id': ''
+    }
+
+
+def _append_profile_history(profile, event_type, details=''):
+    if not isinstance(profile, dict):
+        return
+    hist = profile.setdefault('history', [])
+    hist.append({
+        'type': _safe_profile_text(event_type, 32) or 'event',
+        'details': _safe_profile_text(details, 280),
+        'at': _now_iso()
+    })
+    if len(hist) > PROFILE_HISTORY_LIMIT:
+        del hist[:-PROFILE_HISTORY_LIMIT]
+
+
+def _append_profile_warning(profile, reason, warned_by):
+    if not isinstance(profile, dict):
+        return None
+    warns = profile.setdefault('warnings', [])
+    entry = {
+        'id': secrets.token_hex(6),
+        'reason': _safe_profile_text(reason, 280) or 'Warned by admin',
+        'warned_by': _safe_profile_text(warned_by, 64) or 'SYSTEM',
+        'warned_at': _now_iso()
+    }
+    warns.append(entry)
+    if len(warns) > PROFILE_WARN_LIMIT:
+        del warns[:-PROFILE_WARN_LIMIT]
+    return entry
+
+
+def _resolve_player_profile(player_data, touch_join=False):
+    global player_profiles
+    src = player_data if isinstance(player_data, dict) else {}
+    existing_key = _safe_profile_text(src.get('profile_key'), 140)
+    identifiers = _extract_player_identifiers(src)
+    candidates = _profile_candidate_keys(src, identifiers)
+
+    profile_key = None
+    if existing_key and existing_key in player_profiles:
+        profile_key = existing_key
+    else:
+        for key in candidates:
+            if key in player_profiles:
+                profile_key = key
+                break
+    if not profile_key:
+        profile_key = candidates[0] if candidates else f'anon:{secrets.token_hex(8)}'
+
+    profile = player_profiles.get(profile_key)
+    if not isinstance(profile, dict):
+        profile = _new_player_profile(profile_key)
+        player_profiles[profile_key] = profile
+
+    profile.setdefault('profile_key', profile_key)
+    profile.setdefault('first_seen_at', _now_iso())
+    profile.setdefault('last_connection_at', profile.get('first_seen_at') or _now_iso())
+    profile['total_playtime_sec'] = max(0, _safe_int(profile.get('total_playtime_sec'), 0))
+    profile['notes'] = _safe_profile_text(profile.get('notes', ''), 2000)
+    profile.setdefault('identifiers', {})
+    profile.setdefault('warnings', [])
+    profile.setdefault('history', [])
+
+    if isinstance(profile.get('identifiers'), dict):
+        for k, v in identifiers.items():
+            val = _safe_profile_text(v, 128)
+            if val:
+                profile['identifiers'][_normalize_identifier_key(k)] = val
+
+    name = _safe_profile_name(src.get('name'))
+    ip = normalize_player_ip(src.get('ip', ''))
+    sid = str(src.get('serverId') or '').strip()
+    profile['last_name'] = name
+    profile['last_ip'] = ip
+    profile['last_server_id'] = sid
+
+    if touch_join:
+        _append_profile_history(profile, 'join', f'{name} ({sid or "?"})')
+        profile['last_connection_at'] = _now_iso()
+
+    src['profile_key'] = profile_key
+    if identifiers:
+        src['identifiers'] = identifiers
+    return profile_key, profile
+
+
+def _find_player_profile_from_connected(server_id):
+    sid = str(server_id or '').strip()
+    if not sid:
+        return None, None, None
+    player = connected_players.get(sid)
+    if not isinstance(player, dict):
+        return None, None, None
+    key, profile = _resolve_player_profile(player, touch_join=False)
+    return player, key, profile
+
+
+def _profile_matching_bans(profile, player_row=None):
+    ip_candidates = set()
+    name_candidates = set()
+
+    if isinstance(profile, dict):
+        p_ip = normalize_player_ip(profile.get('last_ip', ''))
+        p_name = _safe_profile_name(profile.get('last_name')).lower()
+        if p_ip:
+            ip_candidates.add(p_ip)
+        if p_name and p_name != 'unknown':
+            name_candidates.add(p_name)
+
+    if isinstance(player_row, dict):
+        row_ip = normalize_player_ip(player_row.get('ip', ''))
+        row_name = _safe_profile_name(player_row.get('name')).lower()
+        if row_ip:
+            ip_candidates.add(row_ip)
+        if row_name and row_name != 'unknown':
+            name_candidates.add(row_name)
+
+    matches = []
+    for idx, ban in enumerate(load_bans()):
+        ban_ip = normalize_player_ip(ban.get('ip', ''))
+        ban_name = _safe_profile_name(ban.get('name')).lower()
+        if (ban_ip and ban_ip in ip_candidates) or (ban_name and ban_name in name_candidates):
+            row = dict(ban)
+            row['_index'] = idx
+            matches.append(row)
+    return matches
+
+
+def _finalize_player_session(player_row, reason='disconnect'):
+    if not isinstance(player_row, dict):
+        return
+    _, profile = _resolve_player_profile(player_row, touch_join=False)
+    now_ts = int(time.time())
+    join_ts = _safe_int(player_row.get('joinTime'), now_ts)
+    delta = max(0, now_ts - join_ts)
+    profile['total_playtime_sec'] = max(0, _safe_int(profile.get('total_playtime_sec'), 0) + delta)
+    profile['last_connection_at'] = _now_iso()
+    _append_profile_history(profile, 'disconnect', _safe_profile_text(reason, 120) or 'disconnect')
+    save_player_profiles(player_profiles)
+
+
+def _finalize_all_connected_sessions(reason='server-stop'):
+    rows = list(connected_players.values())
+    if not rows:
+        return
+    for row in rows:
+        _finalize_player_session(row, reason=reason)
+
+
+player_profiles = load_player_profiles()
+
+
                                                            
 
 def generate_csrf_token():
@@ -593,6 +866,63 @@ def _format_uptime_short(seconds):
     return ' '.join(parts)
 
 
+def _safe_player_name(value):
+    name = str(value or '').strip() or 'Unknown'
+    name = name.replace('\r', ' ').replace('\n', ' ').replace('`', "'")
+    return name[:64]
+
+
+def _players_snapshot_signature(players):
+    rows = []
+    for p in players or []:
+        if not isinstance(p, dict):
+            continue
+        sid = str(p.get('serverId') or '').strip()
+        name = _safe_player_name(p.get('name'))
+        try:
+            ping = max(0, int(p.get('ping', 0)))
+        except Exception:
+            ping = 0
+        rows.append(f'{sid}:{name}:{ping}')
+    rows.sort()
+    return '|'.join(rows)
+
+
+def _format_connected_players_block(max_lines=20, include_ping=False, include_id=False):
+    rows = []
+    for p in connected_players.values():
+        if not isinstance(p, dict):
+            continue
+        name = _safe_player_name(p.get('name'))
+        sid = str(p.get('serverId') or '').strip()
+        try:
+            ping = max(0, int(p.get('ping', 0)))
+        except Exception:
+            ping = 0
+        parts = []
+        if include_id and sid:
+            parts.append(f'id:{sid}')
+        if include_ping:
+            parts.append(f'ping:{ping}ms')
+        if parts:
+            rows.append(f'{name} ({", ".join(parts)})')
+        else:
+            rows.append(name)
+
+    if not rows:
+        return 'No players connected'
+
+    visible = rows[:max_lines]
+    remaining = max(0, len(rows) - len(visible))
+    if remaining:
+        visible.append(f'+{remaining} more...')
+
+    text = '\n'.join(visible)
+    if len(text) > 900:
+        text = text[:900].rstrip()
+    return text
+
+
 def _compute_next_scheduled_restart(times):
     now = datetime.now()
     candidates = []
@@ -640,9 +970,55 @@ def _status_template_context():
         'statusString': status_string,
         'serverClients': len(connected_players),
         'serverMaxClients': settings.get('maxplayers') or 0,
+        'connectedPlayersList': _format_connected_players_block(max_lines=20, include_ping=False, include_id=False),
+        'connectedPlayersWithPing': _format_connected_players_block(max_lines=20, include_ping=True, include_id=False),
+        'connectedPlayersWithId': _format_connected_players_block(max_lines=20, include_ping=False, include_id=True),
+        'connectedPlayersDetailed': _format_connected_players_block(max_lines=20, include_ping=True, include_id=True),
         'nextScheduledRestart': _compute_next_scheduled_restart(panel_config.get('scheduled_restarts') or []),
         'uptime': _format_uptime_short(uptime_seconds),
         '_status_color': status_color
+    }
+
+
+def _presence_text_for_discord():
+    settings = parse_settings_xml() or {}
+    server_name = str(settings.get('hostname') or 'HappinessMP Server').strip()
+    server_name = server_name.replace('\r', ' ').replace('\n', ' ')
+    if not server_name:
+        server_name = 'HappinessMP Server'
+
+    try:
+        max_clients = int(settings.get('maxplayers') or 0)
+    except Exception:
+        max_clients = 0
+    max_clients = max(0, max_clients)
+
+    current_clients = len(connected_players)
+    text = f'[{current_clients}/{max_clients}] {server_name}'
+    if len(text) > 120:
+        text = text[:120].rstrip()
+    return text or '[0/0] HappinessMP Server'
+
+
+def _build_presence_payload_for_discord():
+    if discord is None:
+        return None
+
+    status_cfg = _parse_discord_status_config(_get_discord_config())
+    status_key, _, _ = _resolve_status_state(status_cfg)
+    text = _presence_text_for_discord()
+
+    if status_key == 'online':
+        status_obj = discord.Status.online
+    elif status_key == 'partial':
+        status_obj = discord.Status.idle
+    else:
+        status_obj = discord.Status.dnd
+
+    return {
+        'status': status_obj,
+        'activity': discord.Game(name=text),
+        'signature': f'{status_key}|{text}'
     }
 
 
@@ -659,6 +1035,7 @@ def _status_refresh_signature():
         'statusColor': status_color,
         'serverClients': len(connected_players),
         'serverMaxClients': settings.get('maxplayers') or 0,
+        'connectedPlayersSig': _players_snapshot_signature(connected_players.values()),
         'nextScheduledRestart': _compute_next_scheduled_restart(panel_config.get('scheduled_restarts') or []),
         'statusEmbedJson': str(discord_cfg.get('status_embed_json') or ''),
         'statusConfigJson': str(discord_cfg.get('status_config_json') or '')
@@ -814,6 +1191,7 @@ class PanelDiscordBotClient(discord.Client if discord is not None else object):
         self._admin_permission_blocked = False
         self._status_update_event = asyncio.Event()
         self._last_status_signature = None
+        self._last_presence_signature = None
 
     async def on_ready(self):
         self.runtime.set_running(True)
@@ -854,6 +1232,7 @@ class PanelDiscordBotClient(discord.Client if discord is not None else object):
 
         if self._status_task is None or self._status_task.done():
             self._status_task = asyncio.create_task(self._status_update_loop())
+        await self._refresh_presence(force=True)
         self.request_status_refresh(force=True)
 
     async def close(self):
@@ -871,6 +1250,7 @@ class PanelDiscordBotClient(discord.Client if discord is not None else object):
     def request_status_refresh(self, force=False):
         if force:
             self._last_status_signature = None
+            self._last_presence_signature = None
         if self._status_update_event is not None:
             self._status_update_event.set()
 
@@ -952,11 +1332,28 @@ class PanelDiscordBotClient(discord.Client if discord is not None else object):
                 except asyncio.TimeoutError:
                     pass
                 self._status_update_event.clear()
+                await self._refresh_presence()
                 await self._refresh_status_embeds()
             except asyncio.CancelledError:
                 raise
             except Exception as e:
                 self.runtime.set_error(f'Status embed refresh failed: {e}')
+
+    async def _refresh_presence(self, force=False):
+        payload = _build_presence_payload_for_discord()
+        if not isinstance(payload, dict):
+            return
+        signature = str(payload.get('signature') or '')
+        if not force and signature == self._last_presence_signature:
+            return
+        try:
+            await self.change_presence(
+                status=payload.get('status') or discord.Status.online,
+                activity=payload.get('activity')
+            )
+            self._last_presence_signature = signature
+        except Exception:
+            return
 
     async def _refresh_status_embeds(self):
         cfg = _get_discord_config()
@@ -1606,6 +2003,7 @@ def sync_server_state_with_system(emit_change=False):
         server_state['cpu_usage'] = 0
         server_state['memory_usage'] = 0
         resource_states = {}
+        _finalize_all_connected_sessions(reason='process-missing')
         connected_players = {}
         pending_actions = []
         panel_connector_last_heartbeat = 0.0
@@ -1654,8 +2052,9 @@ def start_server(username):
                                                       
         settings = parse_settings_xml()
         configured_resources = settings.get('resources', []) if settings else []
+        configured_addons = settings.get('addons', []) if settings else []
         resource_states = {}
-        for res_name in configured_resources:
+        for res_name in list(configured_resources) + list(configured_addons):
             resource_states[res_name] = 'started'
 
         save_pid(server_process.pid)
@@ -1716,6 +2115,7 @@ def stop_server(username):
         server_state['start_time'] = None
         server_state['attached'] = False
         resource_states = {}
+        _finalize_all_connected_sessions(reason='server-stop')
         connected_players = {}
         pending_actions = []
         panel_connector_last_heartbeat = 0.0
@@ -1782,6 +2182,7 @@ def update_stats():
                     server_state['pid'] = None
                     server_state['attached'] = False
                     resource_states = {}
+                    _finalize_all_connected_sessions(reason='process-terminated')
                     connected_players = {}
                     pending_actions = []
                     panel_connector_last_heartbeat = 0.0
@@ -1803,6 +2204,7 @@ def update_stats():
                 server_state['pid'] = None
                 server_state['attached'] = False
                 resource_states = {}
+                _finalize_all_connected_sessions(reason='process-gone')
                 connected_players = {}
                 pending_actions = []
                 panel_connector_last_heartbeat = 0.0
@@ -1859,6 +2261,8 @@ def parse_settings_xml():
                                         
             if tag == 'resource':
                 result.setdefault('resources', []).append(text)
+            elif tag == 'addon':
+                result.setdefault('addons', []).append(text)
             elif tag in ('listed', 'chat'):
                 result[tag] = text.lower() in ('true', '1', 'yes')
             elif tag in ('port', 'maxplayers', 'episode', 'loglevel'):
@@ -1893,6 +2297,10 @@ def write_settings_xml(data):
     for res in data.get('resources', []):
         el = ET.SubElement(root, 'resource')
         el.text = str(res).strip()
+
+    for addon in data.get('addons', []):
+        el = ET.SubElement(root, 'addon')
+        el.text = str(addon).strip()
 
     tree = ET.ElementTree(root)
     ET.indent(tree, space='  ')
@@ -2328,6 +2736,8 @@ def _load_update_run_state():
 def get_update_payload():
     with update_lock:
         state = json.loads(json.dumps(update_state))
+    if not (state.get('panel') or {}).get('current'):
+        state.setdefault('panel', {})['current'] = _load_panel_version()
     run_state = _load_update_run_state()
     state['available'] = bool(state['panel']['available'] or state['happiness']['available'])
     state['run'] = run_state
@@ -2988,6 +3398,10 @@ def api_set_settings():
                 return jsonify({'success': False, 'message': 'Invalid password'}), 403
 
         data.pop('admin_password', None)
+        if 'resources' not in data:
+            data['resources'] = list(existing.get('resources', []))
+        if 'addons' not in data:
+            data['addons'] = list(existing.get('addons', []))
         write_settings_xml(data)
         discord_runtime.request_status_refresh(force=True)
 
@@ -3659,6 +4073,121 @@ def api_resource_start(name):
     return jsonify({'success': False, 'message': 'Failed to send command'})
 
 
+@app.route('/api/addons')
+@login_required
+@require_permission('can_manage_resources')
+def api_list_addons():
+    """List all addons in the server addons/ directory."""
+    addons_dir = os.path.join(get_server_dir(), 'addons')
+    if not os.path.isdir(addons_dir):
+        return jsonify({'addons': []})
+
+    settings = parse_settings_xml()
+    configured_addons = settings.get('addons', []) if settings else []
+
+    addons = []
+    for name in sorted(os.listdir(addons_dir)):
+        full_path = os.path.join(addons_dir, name)
+        if os.path.isdir(full_path):
+            if name in resource_states:
+                state = resource_states[name]
+            elif server_state['running'] and name in configured_addons:
+                state = 'started'
+            elif server_state['running']:
+                state = 'stopped'
+            else:
+                state = 'stopped'
+
+            has_meta = os.path.isfile(os.path.join(full_path, 'meta.xml'))
+            addons.append({
+                'name': name,
+                'status': state,
+                'configured': name in configured_addons,
+                'has_meta': has_meta
+            })
+    return jsonify({'addons': addons})
+
+
+@app.route('/api/addons/<name>/configure', methods=['POST'])
+@login_required
+@admin_required
+def api_addon_configure(name):
+    """Add an addon to settings.xml."""
+    safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '', name or '')
+    if not safe_name:
+        return jsonify({'success': False, 'message': 'Invalid addon name'}), 400
+
+    addons_dir = os.path.join(get_server_dir(), 'addons')
+    full_path = os.path.join(addons_dir, safe_name)
+    if not os.path.isdir(full_path):
+        return jsonify({'success': False, 'message': 'Addon not found'}), 404
+
+    settings = parse_settings_xml()
+    if settings is None:
+        return jsonify({'success': False, 'message': 'settings.xml not found'}), 404
+
+    addons = settings.get('addons', [])
+    if safe_name not in addons:
+        addons.append(safe_name)
+        settings['addons'] = addons
+        write_settings_xml(settings)
+        log_user_action(session['username'], 'ADDON_CONFIGURE', safe_name)
+
+    return jsonify({'success': True, 'configured': True})
+
+
+@app.route('/api/addons/<name>/start', methods=['POST'])
+@login_required
+@require_permission('can_manage_resources')
+def api_addon_start(name):
+    """Start an addon by sending addonstart command."""
+    global server_process, resource_states
+    if not server_state['running']:
+        return jsonify({'success': False, 'message': 'Server is not running'})
+    if server_state['attached']:
+        return jsonify({'success': False, 'message': 'Cannot send commands to attached process'})
+    safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '', name)
+    try:
+        if server_process and server_process.stdin:
+            server_process.stdin.write(f"addonstart {safe_name}\n".encode())
+            server_process.stdin.flush()
+            resource_states[safe_name] = 'started'
+            add_console_line(f'> addonstart {safe_name}', session['username'])
+            log_user_action(session['username'], 'ADDON_START', safe_name)
+            return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+    return jsonify({'success': False, 'message': 'Failed to send command'})
+
+
+@app.route('/api/addons/<name>/stop', methods=['POST'])
+@login_required
+@require_permission('can_manage_resources')
+def api_addon_stop(name):
+    """Addon stop is not supported at runtime."""
+    safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '', name or '')
+    if safe_name:
+        log_user_action(session['username'], 'ADDON_STOP_BLOCKED', safe_name)
+    return jsonify({
+        'success': False,
+        'message': 'Addons cannot be stopped individually. Restart the server.'
+    }), 400
+
+
+@app.route('/api/addons/<name>/restart', methods=['POST'])
+@login_required
+@require_permission('can_manage_resources')
+def api_addon_restart(name):
+    """Addon restart is not supported at runtime."""
+    safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '', name or '')
+    if safe_name:
+        log_user_action(session['username'], 'ADDON_RESTART_BLOCKED', safe_name)
+    return jsonify({
+        'success': False,
+        'message': 'Addons cannot be restarted individually. Restart the server.'
+    }), 400
+
+
 @app.route('/api/resources/<name>/stop', methods=['POST'])
 @login_required
 @require_permission('can_manage_resources')
@@ -3727,8 +4256,11 @@ def api_panel_hook_player_join():
     ip = normalize_player_ip(data.get('ip', ''))
     data['ip'] = ip
 
-                  
+    now_ts = int(time.time())
     if server_id is not None:
+        sid = str(server_id)
+        old = connected_players.get(sid, {})
+        join_ts = _safe_int(data.get('joinTime'), 0) or _safe_int(old.get('joinTime'), 0) or now_ts
         connected_players[str(server_id)] = {
             'serverId': server_id,
             'name': name,
@@ -3736,8 +4268,11 @@ def api_panel_hook_player_join():
             'ip': ip,
             'session': data.get('session', 0),
             'sessionActive': data.get('sessionActive', False),
-            'joinTime': data.get('joinTime', int(time.time()))
+            'joinTime': join_ts,
+            'identifiers': _extract_player_identifiers(data)
         }
+        _resolve_player_profile(connected_players[sid], touch_join=(not old))
+        save_player_profiles(player_profiles)
 
                      
     banned, ban_info = is_player_banned(ip=ip, name=name)
@@ -3761,8 +4296,11 @@ def api_panel_hook_player_disconnect():
         return jsonify({'error': 'Invalid secret'}), 403
     data = request.json or {}
     server_id = str(data.get('serverId', ''))
+    reason = data.get('reason', 'disconnect')
 
-                          
+    row = connected_players.get(server_id)
+    if row:
+        _finalize_player_session(row, reason=reason)
     connected_players.pop(server_id, None)
 
     panel_connector_last_heartbeat = time.time()
@@ -3782,19 +4320,32 @@ def api_panel_hook_players_sync():
     players = data.get('players', [])
 
                         
+    now_ts = int(time.time())
+    old_players = connected_players
     new_players = {}
     for p in players:
         sid = str(p.get('serverId', ''))
         if sid:
             row = dict(p)
             row['ip'] = normalize_player_ip(row.get('ip', ''))
+            old = old_players.get(sid, {})
+            row['joinTime'] = _safe_int(row.get('joinTime'), 0) or _safe_int(old.get('joinTime'), 0) or now_ts
+            row['profile_key'] = row.get('profile_key') or old.get('profile_key', '')
+            row['identifiers'] = _extract_player_identifiers(row)
+            _resolve_player_profile(row, touch_join=(not old))
             new_players[sid] = row
-    prev_count = len(connected_players)
+    prev_sig = _players_snapshot_signature(old_players.values())
+
+    for old_sid, old_row in old_players.items():
+        if old_sid not in new_players:
+            _finalize_player_session(old_row, reason='sync-missing')
+
     connected_players = new_players
     panel_connector_last_heartbeat = time.time()
+    save_player_profiles(player_profiles)
 
     socketio.emit('players_update', {'players': list(connected_players.values())})
-    if len(connected_players) != prev_count:
+    if _players_snapshot_signature(connected_players.values()) != prev_sig:
         discord_runtime.request_status_refresh(force=False)
     return jsonify({'ok': True})
 
@@ -3853,6 +4404,120 @@ def api_players_list():
     return jsonify({'players': list(connected_players.values())})
 
 
+@app.route('/api/players/profile/<server_id>')
+@login_required
+@require_permission('can_view_players')
+def api_players_profile(server_id):
+    """Get extended profile information for an online player."""
+    player_row, profile_key, profile = _find_player_profile_from_connected(server_id)
+    if not player_row or not profile:
+        return jsonify({'success': False, 'message': 'Player not found'}), 404
+
+    now_ts = int(time.time())
+    join_ts = _safe_int(player_row.get('joinTime'), now_ts)
+    current_session = max(0, now_ts - join_ts)
+    playtime_seconds = max(0, _safe_int(profile.get('total_playtime_sec'), 0) + current_session)
+
+    bans = _profile_matching_bans(profile, player_row)
+    warnings = list(profile.get('warnings') or [])
+    history = list(profile.get('history') or [])
+
+    warnings.sort(key=lambda w: str(w.get('warned_at') or ''), reverse=True)
+    history.sort(key=lambda h: str(h.get('at') or ''), reverse=True)
+
+    payload = {
+        'success': True,
+        'player': {
+            'serverId': player_row.get('serverId'),
+            'name': player_row.get('name', 'Unknown'),
+            'ping': _safe_int(player_row.get('ping'), 0),
+            'ip': normalize_player_ip(player_row.get('ip', '')),
+            'session': _safe_int(player_row.get('session'), 0),
+            'sessionActive': bool(player_row.get('sessionActive')),
+            'online': True
+        },
+        'profile': {
+            'profile_key': profile_key,
+            'join_date': profile.get('first_seen_at') or _now_iso(),
+            'last_connection': profile.get('last_connection_at') or profile.get('first_seen_at') or _now_iso(),
+            'playtime_seconds': playtime_seconds,
+            'notes': _safe_profile_text(profile.get('notes', ''), 2000),
+            'id_whitelisted': bool(profile.get('id_whitelisted', False)),
+            'identifiers': profile.get('identifiers') or {},
+            'sanctions': {
+                'warns': len(warnings),
+                'bans': len(bans)
+            },
+            'warnings': warnings[:40],
+            'bans': bans[:40],
+            'history': history[:60]
+        }
+    }
+    return jsonify(payload)
+
+
+@app.route('/api/players/profile/<server_id>/notes', methods=['POST'])
+@login_required
+@require_permission('can_control_server')
+def api_players_profile_notes(server_id):
+    """Update notes for an online player's profile."""
+    player_row, _, profile = _find_player_profile_from_connected(server_id)
+    if not player_row or not profile:
+        return jsonify({'success': False, 'message': 'Player not found'}), 404
+
+    data = request.json or {}
+    notes = _safe_profile_text(data.get('notes', ''), 2000)
+    profile['notes'] = notes
+    _append_profile_history(profile, 'notes', f'Updated by {session["username"]}')
+    save_player_profiles(player_profiles)
+    log_user_action(session['username'], 'PLAYER_NOTES_UPDATE', f'{player_row.get("name","Unknown")} ({server_id})')
+    return jsonify({'success': True, 'message': 'Notes saved'})
+
+
+@app.route('/api/players/warn', methods=['POST'])
+@login_required
+@require_permission('can_control_server')
+def api_players_warn():
+    """Warn a player and store warning into profile."""
+    global pending_actions
+    data = request.json or {}
+    server_id = data.get('serverId')
+    reason = _safe_profile_text(data.get('reason', ''), 280) or 'Warning from admin'
+    duration = _safe_int(data.get('duration', 8), 8)
+    duration = max(3, min(20, duration))
+
+    if server_id is None:
+        return jsonify({'success': False, 'message': 'serverId required'})
+
+    player_row = connected_players.get(str(server_id))
+    if not player_row:
+        return jsonify({'success': False, 'message': 'Player not found'}), 404
+
+    _, profile = _resolve_player_profile(player_row, touch_join=False)
+    entry = _append_profile_warning(profile, reason, session['username'])
+    _append_profile_history(profile, 'warn', reason)
+    save_player_profiles(player_profiles)
+
+    pending_actions.append({
+        'type': 'warn',
+        'serverId': server_id,
+        'reason': reason,
+        'duration': duration
+    })
+
+    pname = player_row.get('name', 'Unknown')
+    log_user_action(session['username'], 'WARN_PLAYER', f'{pname} (ID: {server_id}) - {reason}')
+    add_console_line(f'[Panel] Warn queued: {pname} (ID: {server_id}) - {reason}', session.get('username'))
+
+    warns_count = len(profile.get('warnings') or [])
+    return jsonify({
+        'success': True,
+        'message': f'Warn queued for {pname}',
+        'warn': entry,
+        'warns_count': warns_count
+    })
+
+
 @app.route('/api/players/kick', methods=['POST'])
 @login_required
 @require_permission('can_control_server')
@@ -3872,7 +4537,12 @@ def api_players_kick():
         'reason': reason
     })
 
-    player_name = connected_players.get(str(server_id), {}).get('name', 'Unknown')
+    player_row = connected_players.get(str(server_id), {})
+    player_name = player_row.get('name', 'Unknown')
+    if player_row:
+        _, profile = _resolve_player_profile(player_row, touch_join=False)
+        _append_profile_history(profile, 'kick', reason)
+        save_player_profiles(player_profiles)
     add_console_line(f'[Panel] Kick queued: {player_name} (ID: {server_id}) - {reason}', session.get('username'))
     log_user_action(session['username'], 'KICK_PLAYER', f'{player_name} (ID: {server_id}) - {reason}')
 
@@ -3905,6 +4575,13 @@ def api_players_ban():
     }
     bans.append(ban_entry)
     save_bans(bans)
+
+    profile_source = connected_players.get(str(server_id), {}) if server_id is not None else {}
+    if not profile_source:
+        profile_source = {'serverId': server_id, 'name': name, 'ip': ip}
+    _, profile = _resolve_player_profile(profile_source, touch_join=False)
+    _append_profile_history(profile, 'ban', reason)
+    save_player_profiles(player_profiles)
 
                                             
     if server_id is not None:

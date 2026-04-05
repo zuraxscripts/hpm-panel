@@ -8,6 +8,7 @@ USERS_FILE = DATA_DIR / 'users.json'
 CONFIG_FILE = DATA_DIR / 'config.json'
 PANEL_CONFIG_FILE = Path('./panel_config.json')
 BANS_FILE = DATA_DIR / 'bans.json'
+PLAYER_PROFILES_FILE = DATA_DIR / 'player_profiles.json'
 
 DATA_DIR.mkdir(exist_ok=True)
 
@@ -387,6 +388,29 @@ def save_bans(bans: list):
     _json_save(BANS_FILE, bans)
 
 
+def load_player_profiles():
+    if db_enabled():
+        data = _db_get_app_config('player_profiles')
+        if isinstance(data, dict):
+            profiles = data.get('profiles', data)
+            if isinstance(profiles, dict):
+                return profiles
+        return {}
+    data = _json_load(PLAYER_PROFILES_FILE, {})
+    if isinstance(data, dict):
+        return data
+    return {}
+
+
+def save_player_profiles(profiles: dict):
+    if not isinstance(profiles, dict):
+        profiles = {}
+    if db_enabled():
+        _db_set_app_config('player_profiles', {'profiles': profiles})
+        return
+    _json_save(PLAYER_PROFILES_FILE, profiles)
+
+
 def migrate_json_to_db(force: bool = False):
     if not db_enabled():
         return
@@ -442,3 +466,9 @@ def migrate_json_to_db(force: bool = False):
                         )
             finally:
                 conn.close()
+
+    if PLAYER_PROFILES_FILE.exists():
+        profiles = _json_load(PLAYER_PROFILES_FILE, {})
+        if isinstance(profiles, dict):
+            if force or _db_get_app_config('player_profiles') is None:
+                _db_set_app_config('player_profiles', {'profiles': profiles})
