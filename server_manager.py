@@ -50,10 +50,23 @@ except Exception:
 import db
 import storage
 
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+FORCE_HTTPS = _env_bool('PANEL_FORCE_HTTPS', False)
+SESSION_COOKIE_SECURE = _env_bool('PANEL_SESSION_COOKIE_SECURE', FORCE_HTTPS)
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(32)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024                      
+app.config['SESSION_COOKIE_SECURE'] = SESSION_COOKIE_SECURE
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 socketio = SocketIO(app)
 
                                                          
@@ -386,6 +399,21 @@ def validate_csrf_token():
     if not expected or not token or not secrets.compare_digest(token, expected):
         return False
     return True
+
+@app.before_request
+def enforce_https_if_enabled():
+    """Optionally force HTTPS when PANEL_FORCE_HTTPS is enabled."""
+    if not FORCE_HTTPS:
+        return
+    if request.is_secure:
+        return
+    if str(request.headers.get('X-Forwarded-Proto', '')).lower() == 'https':
+        return
+    host = str(request.host or '').lower()
+    if host.startswith('127.0.0.1') or host.startswith('localhost'):
+        return
+    secure_url = request.url.replace('http://', 'https://', 1)
+    return redirect(secure_url, code=301)
 
 @app.before_request
 def csrf_protect():

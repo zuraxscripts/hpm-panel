@@ -2305,7 +2305,6 @@
     function defaultDiscordStatusEmbedTemplate(){
       return {
         title: "{{serverName}}",
-        url: "{{serverBrowserUrl}}",
         description: "",
         fields: [
           { name: "> STATUS", value: "```\n{{statusString}}\n```", inline: true },
@@ -2321,11 +2320,11 @@
 
     function defaultDiscordStatusConfigTemplate(){
       return {
-        onlineString: "🟢 Online",
+        onlineString: "Online",
         onlineColor: "#0BA70B",
-        partialString: "🟡 Partial",
+        partialString: "Partial",
         partialColor: "#FFF100",
-        offlineString: "🔴 Offline",
+        offlineString: "Offline",
         offlineColor: "#A70B28",
         buttons: []
       };
@@ -2342,7 +2341,40 @@
         const res = await fetch('/api/csrf-token');
         const data = await res.json();
         csrfToken = data.token || '';
+      } catch(e) {
+        csrfToken = '';
+      }
+      return csrfToken;
+    }
+
+    async function ensureCsrfToken(force = false){
+      if(!force && csrfToken) return csrfToken;
+      return fetchCsrfToken();
+    }
+
+    async function csrfAwareFetch(url, options = {}, retry = true){
+      const opts = options || {};
+      const method = String(opts.method || 'GET').toUpperCase();
+      const needsCsrf = ['POST','PUT','DELETE','PATCH'].includes(method);
+      const headers = new Headers(opts.headers || {});
+      if(needsCsrf){
+        await ensureCsrfToken(false);
+        if(csrfToken) headers.set('X-CSRF-Token', csrfToken);
+      }
+      const first = await fetch(url, { ...opts, headers });
+      if(!needsCsrf || !retry || first.status !== 403) return first;
+
+      let errText = '';
+      try {
+        const body = await first.clone().json();
+        errText = String(body.error || body.message || '');
       } catch(e) {}
+      if(!/csrf/i.test(errText)) return first;
+
+      await ensureCsrfToken(true);
+      if(!csrfToken) return first;
+      headers.set('X-CSRF-Token', csrfToken);
+      return fetch(url, { ...opts, headers });
     }
 
     function t(key, fallback) {
@@ -2947,13 +2979,13 @@
 
     async function apiPost(url, body){
       try {
-        const res = await fetch(url, {
+        const res = await csrfAwareFetch(url, {
           method:'POST',
-          headers:{'Content-Type':'application/json', 'X-CSRF-Token': csrfToken},
+          headers:{'Content-Type':'application/json'},
           body: body ? JSON.stringify(body) : '{}'
         });
         if(res.status === 401) window.location.href = '/login';
-        return res.json();
+        return await res.json();
       } catch(e) {
         return { success: false, message: 'Request failed' };
       }
@@ -2961,13 +2993,13 @@
 
     async function apiPut(url, body){
       try {
-        const res = await fetch(url, {
+        const res = await csrfAwareFetch(url, {
           method:'PUT',
-          headers:{'Content-Type':'application/json', 'X-CSRF-Token': csrfToken},
+          headers:{'Content-Type':'application/json'},
           body: body ? JSON.stringify(body) : '{}'
         });
         if(res.status === 401) window.location.href = '/login';
-        return res.json();
+        return await res.json();
       } catch(e) {
         return { success: false, message: 'Request failed' };
       }
@@ -2975,12 +3007,9 @@
 
     async function apiDelete(url){
       try {
-        const res = await fetch(url, {
-          method:'DELETE',
-          headers:{'X-CSRF-Token': csrfToken}
-        });
+        const res = await csrfAwareFetch(url, { method:'DELETE' });
         if(res.status === 401) window.location.href = '/login';
-        return res.json();
+        return await res.json();
       } catch(e) {
         return { success: false, message: 'Request failed' };
       }
