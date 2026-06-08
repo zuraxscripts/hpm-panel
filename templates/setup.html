@@ -442,6 +442,264 @@
             .summary-grid { grid-template-columns: 1fr; }
             .progress-log { max-height: 26vh; }
         }
+
+        :root {
+            --bg: #0d0d0e;
+            --bg2: #151517;
+            --bg3: #1b1b1e;
+            --border: #2a2a2f;
+            --text: #eeeeef;
+            --muted: #a7a7ac;
+            --primary: #eeeeef;
+            --primary-hover: #d8d8dc;
+            --danger: #d55f5f;
+            --success: #49a86b;
+            --warning: #c79143;
+            --focus: #74747c;
+        }
+
+        * {
+            letter-spacing: 0 !important;
+            text-transform: none !important;
+        }
+
+        body {
+            font-family: Aptos, "Helvetica Neue", sans-serif;
+            background: var(--bg);
+            padding: 24px;
+        }
+
+        .setup-container {
+            max-width: 480px;
+            animation: none;
+        }
+
+        .logo {
+            text-align: left;
+            margin-bottom: 18px;
+        }
+
+        .logo img {
+            width: 190px;
+            margin-bottom: 10px;
+        }
+
+        .logo h1 {
+            font-size: 20px;
+            line-height: 1.2;
+            font-weight: 700;
+        }
+
+        .logo p {
+            display: none;
+        }
+
+        .card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: none;
+            padding: 24px;
+        }
+
+        .card-title {
+            color: var(--text);
+            font-size: 18px;
+            line-height: 1.3;
+            margin-bottom: 4px;
+        }
+
+        .card-subtitle {
+            color: var(--muted);
+            margin-bottom: 20px;
+        }
+
+        .setup-steps {
+            border-bottom: 1px solid var(--border);
+            gap: 0;
+            margin: 0 0 20px;
+        }
+
+        .step-pill {
+            background: transparent;
+            border: 0;
+            border-bottom: 2px solid transparent;
+            border-radius: 0;
+            color: var(--muted);
+            font-size: 13px;
+            padding: 10px 8px;
+        }
+
+        .step-pill.active {
+            background: transparent;
+            border-color: var(--text);
+            color: var(--text);
+        }
+
+        .setup-step {
+            animation: none;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .form-label i {
+            color: var(--muted);
+            opacity: 1;
+        }
+
+        .form-input,
+        .pin-input {
+            background: #101011;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text);
+            font-size: 14px;
+            padding: 10px 11px;
+            transition: border-color 120ms ease, background-color 120ms ease;
+        }
+
+        .pin-input {
+            font-size: 18px;
+            padding: 12px 0;
+        }
+
+        .form-input::placeholder {
+            color: #6f6f76;
+        }
+
+        .form-input:focus,
+        .pin-input:focus {
+            background: #101011;
+            border-color: var(--focus);
+            box-shadow: 0 0 0 2px rgba(116,116,124,.22);
+        }
+
+        .btn-submit,
+        .btn-secondary {
+            border-radius: 7px;
+            font-size: 14px;
+            min-height: 40px;
+            padding: 9px 12px;
+            transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease;
+        }
+
+        .btn-submit {
+            background: var(--primary);
+            border: 1px solid var(--primary);
+            color: #101011;
+        }
+
+        .btn-submit:hover {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+            color: #101011;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg3);
+            transform: none;
+        }
+
+        .btn-submit:active,
+        .btn-submit:disabled,
+        .btn-secondary:active,
+        .btn-secondary:disabled {
+            transform: none;
+        }
+
+        .status-indicator,
+        .setup-summary,
+        .summary-item,
+        .progress-log {
+            background: #101011;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+        }
+
+        .status-indicator.ok {
+            background: rgba(73,168,107,.11);
+            border-color: rgba(73,168,107,.34);
+            color: #9fd9b5;
+        }
+
+        .status-indicator.bad,
+        .alert-error {
+            background: rgba(213,95,95,.12);
+            border-color: rgba(213,95,95,.32);
+            color: #f0b1b1;
+        }
+
+        .alert-success {
+            background: rgba(73,168,107,.11);
+            border-color: rgba(73,168,107,.34);
+            color: #9fd9b5;
+        }
+
+        .status-dot,
+        .meta-pill {
+            border-radius: 6px;
+        }
+
+        .alert {
+            border-radius: 7px;
+            padding: 10px 11px;
+        }
+
+        .progress-bar,
+        .strength-bar {
+            background: #252529;
+            border-radius: 4px;
+        }
+
+        .progress-fill {
+            background: var(--text);
+            transition: width 120ms ease;
+        }
+
+        .meta-pill {
+            background: var(--bg3);
+            border: 1px solid var(--border);
+        }
+
+        .progress-log-title,
+        .summary-title,
+        .summary-label,
+        .form-hint,
+        .progress-step {
+            color: var(--muted);
+        }
+
+        @media (max-width: 520px) {
+            body {
+                align-items: flex-start;
+                padding: 20px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .setup-steps {
+                flex-direction: row;
+                overflow-x: auto;
+            }
+        }
     </style>
 </head>
 <body>
