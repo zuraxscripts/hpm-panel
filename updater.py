@@ -21,7 +21,7 @@ STATUS_FILE = DATA_DIR / 'update_status.json'
 LOG_FILE = DATA_DIR / 'update.log'
 DEFAULT_PANEL_PORT = 20000
 PANEL_PORT = DEFAULT_PANEL_PORT
-CONNECTOR_API_URL = 'https://api.github.com/repos/zuraxscripts/hpm-connector/releases/latest'
+CONNECTOR_API_URL = 'https://api.github.com/repos/zuraxscripts/hmp-connector/releases/latest'
 
 
 DATA_DIR.mkdir(exist_ok=True)

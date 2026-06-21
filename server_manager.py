@@ -207,9 +207,19 @@ DEFAULT_DISCORD_STATUS_CONFIG = {
           
 BANS_FILE = DATA_DIR / 'bans.json'
 
-                      
-SETUP_SERVER_ZIP_URL = 'https://happinessmp.net/files/HappinessMP%20Server%201.9%20Linux.zip'
-SETUP_CONNECTOR_API_URL = 'https://api.github.com/repos/zuraxscripts/hpm-connector/releases/latest'
+                       
+def _resolve_setup_zip_url():
+    try:
+        info = json.loads(Path('happiness_update.json').read_text(encoding='utf-8'))
+        url = (info.get('zip_url') or '').strip()
+        if url:
+            return url
+    except Exception:
+        pass
+    return 'https://happinessmp.net/files/HappinessMP%20Server%201.9.3%20Linux.zip'
+
+SETUP_SERVER_ZIP_URL = _resolve_setup_zip_url()
+SETUP_CONNECTOR_API_URL = 'https://api.github.com/repos/zuraxscripts/hmp-connector/releases/latest'
 SETUP_DOWNLOAD_DIR = DATA_DIR / 'downloads'
 DEFAULT_PANEL_PORT = 20000
 PANEL_PORT = DEFAULT_PANEL_PORT
@@ -326,9 +336,9 @@ UPDATE_CONFIG_FILE = Path('./update_config.json')
 UPDATE_STATUS_FILE = DATA_DIR / 'update_status.json'
 UPDATE_JOB_FILE = DATA_DIR / 'update_job.json'
 
-DEFAULT_PANEL_REPO = 'zuraxscripts/hpm-panel'
-DEFAULT_UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/zuraxscripts/hpm-panel/main/update_config.json'
-DEFAULT_HAPPINESS_UPDATE_URL = 'https://raw.githubusercontent.com/zuraxscripts/hpm-panel/main/happiness_update.json'
+DEFAULT_PANEL_REPO = 'zuraxscripts/hmp-panel'
+DEFAULT_UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/zuraxscripts/hmp-panel/main/update_config.json'
+DEFAULT_HAPPINESS_UPDATE_URL = 'https://raw.githubusercontent.com/zuraxscripts/hmp-panel/main/happiness_update.json'
 DEFAULT_UPDATE_INTERVAL_MINUTES = 30
 
 update_state = {
