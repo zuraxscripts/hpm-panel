@@ -2993,12 +2993,21 @@ def check_for_updates(force: bool = False):
     panel_repo = (update_cfg.get('panel_repo') or '').strip()
     if panel_repo:
         try:
-            api_url = f'https://api.github.com/repos/{panel_repo}/releases/latest'
+            api_url = f'https://api.github.com/repos/{panel_repo}/releases?per_page=10'
             data = _fetch_json(api_url)
-            panel_latest = data.get('tag_name') or ''
-            panel_zip = data.get('zipball_url') or ''
-            panel_release_url = data.get('html_url') or ''
-            panel_available = _is_newer_version(panel_latest, panel_current)
+            if isinstance(data, list):
+                for release in data:
+                    tag = release.get('tag_name') or ''
+                    if (
+                        not release.get('draft', True)
+                        and not release.get('prerelease', False)
+                        and tag.endswith(f'-{BRANCH}')
+                    ):
+                        panel_latest = tag
+                        panel_zip = release.get('zipball_url') or ''
+                        panel_release_url = release.get('html_url') or ''
+                        panel_available = _is_newer_version(panel_latest, panel_current)
+                        break
         except Exception as e:
             errors.append(f'Panel update check failed: {e}')
 
