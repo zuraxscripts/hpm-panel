@@ -25,7 +25,7 @@
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/bash\r\n# HMP Panel installation\r\napt update\r\napt install -y git curl python3\r\n\r\nmkdir -p /mnt/server\r\ncd /mnt/server\r\n\r\n# Clean directory for fresh clone\r\nrm -rf * .git\r\n\r\necho -e \"Downloading code from GitHub...\"\r\ngit clone https://github.com/zuraxscripts/hmp-panel.git .\r\n\r\necho -e \"Installation completed.\"",
+            "script": "#!/bin/bash\r\n# HMP Panel installation\r\napt update\r\napt install -y git curl python3\r\n\r\nmkdir -p /mnt/server\r\ncd /mnt/server\r\n\r\n# Clean directory for fresh clone\r\nrm -rf * .git\r\n\r\necho -e \"Downloading code from GitHub...\"\r\ngit clone https://github.com/zuraxscripts/hpm-panel.git .\r\n\r\necho -e \"Installation completed.\"",
             "container": "ghcr.io/parkervcp/installers:debian",
             "entrypoint": "bash"
         }

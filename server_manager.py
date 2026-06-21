@@ -10,7 +10,6 @@ import subprocess
 import threading
 import asyncio
 import time
-import signal
 import json
 import hashlib
 import base64
@@ -21,13 +20,18 @@ import zipfile
 import urllib.request
 import tempfile
 import re
-import stat
 import logging
 import xml.etree.ElementTree as ET
 from io import BytesIO
 from datetime import datetime, timedelta
 from pathlib import Path
 from functools import wraps
+
+IS_WINDOWS = (os.name == 'nt')
+
+if not IS_WINDOWS:
+    import signal
+    import stat
 
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, send_from_directory, send_file, abort
 from flask_socketio import SocketIO, emit, disconnect
@@ -204,7 +208,7 @@ DEFAULT_DISCORD_STATUS_CONFIG = {
     'buttons': []
 }
 
-          
+           
 BANS_FILE = DATA_DIR / 'bans.json'
 
                        
@@ -216,10 +220,12 @@ def _resolve_setup_zip_url():
             return url
     except Exception:
         pass
-    return 'https://happinessmp.net/files/HappinessMP%20Server%201.9.3%20Linux.zip'
+    return 'https://happinessmp.net/files/HappinessMP%20Server%201.9.3%20Windows.zip' if IS_WINDOWS else 'https://happinessmp.net/files/HappinessMP%20Server%201.9.3%20Linux.zip'
 
 SETUP_SERVER_ZIP_URL = _resolve_setup_zip_url()
-SETUP_CONNECTOR_API_URL = 'https://api.github.com/repos/zuraxscripts/hmp-connector/releases/latest'
+
+SERVER_BINARY = 'HappMP.exe' if IS_WINDOWS else 'HappMP'
+SETUP_CONNECTOR_API_URL = 'https://api.github.com/repos/zuraxscripts/hpm-connector/releases/latest'
 SETUP_DOWNLOAD_DIR = DATA_DIR / 'downloads'
 DEFAULT_PANEL_PORT = 20000
 PANEL_PORT = DEFAULT_PANEL_PORT
@@ -277,7 +283,8 @@ def _save_setup_pin(pin: str):
     }
     SETUP_PIN_FILE.write_text(json.dumps(payload, indent=4), encoding='utf-8')
     try:
-        os.chmod(SETUP_PIN_FILE, 0o600)
+        if not IS_WINDOWS:
+            os.chmod(SETUP_PIN_FILE, 0o600)
     except Exception:
         pass
 
@@ -336,9 +343,9 @@ UPDATE_CONFIG_FILE = Path('./update_config.json')
 UPDATE_STATUS_FILE = DATA_DIR / 'update_status.json'
 UPDATE_JOB_FILE = DATA_DIR / 'update_job.json'
 
-DEFAULT_PANEL_REPO = 'zuraxscripts/hmp-panel'
-DEFAULT_UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/zuraxscripts/hmp-panel/main/update_config.json'
-DEFAULT_HAPPINESS_UPDATE_URL = 'https://raw.githubusercontent.com/zuraxscripts/hmp-panel/main/happiness_update.json'
+DEFAULT_PANEL_REPO = 'zuraxscripts/hpm-panel'
+DEFAULT_UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/zuraxscripts/hpm-panel/main/update_config.json'
+DEFAULT_HAPPINESS_UPDATE_URL = 'https://raw.githubusercontent.com/zuraxscripts/hpm-panel/main/happiness_update.json'
 DEFAULT_UPDATE_INTERVAL_MINUTES = 30
 
 update_state = {
@@ -2132,7 +2139,7 @@ config = load_config()
 
 def get_server_dir():
     
-    server_path = os.path.abspath(config.get('server_path', './HPNMP/HappMP'))
+    server_path = os.path.abspath(config.get('server_path', f'./HPNMP/{SERVER_BINARY}'))
     return os.path.dirname(server_path)
 
 
@@ -2172,7 +2179,7 @@ def remove_pid():
 
 def find_server_process():
     
-    server_name = config.get('server_name', 'HappMP')
+    server_name = config.get('server_name', SERVER_BINARY)
 
     for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'create_time']):
         try:
@@ -2233,8 +2240,8 @@ def sync_server_state_with_system(emit_change=False):
                 server_state['start_time'] = proc.create_time()
             except Exception:
                 server_state['start_time'] = time.time()
-        managed_pid = server_process.pid if server_process else None
-        server_state['attached'] = managed_pid != proc.pid
+        managed_pid = (server_process.pid if server_process else None) or server_state.get('pid') or load_pid()
+        server_state['attached'] = bool(managed_pid) and managed_pid != proc.pid
         if server_state['attached']:
             server_process = None
         save_pid(proc.pid)
@@ -2250,8 +2257,6 @@ def sync_server_state_with_system(emit_change=False):
         connected_players = {}
         pending_actions = []
         panel_connector_last_heartbeat = 0.0
-        server_process = None
-        remove_pid()
 
     if emit_change and prev_running != bool(server_state.get('running')):
         socketio.emit('server_status', {'running': bool(server_state.get('running'))})
@@ -2268,31 +2273,43 @@ def start_server(username):
         return {'success': False, 'message': 'Server is already running'}
 
     try:
-        server_path = config.get('server_path', './HPNMP/HappMP')
+        server_path = config.get('server_path', f'./HPNMP/{SERVER_BINARY}')
 
         if not os.path.exists(server_path):
             return {'success': False, 'message': f'Server executable not found: {server_path}'}
 
-        try:
-            os.chmod(server_path, 0o755)
-        except Exception:
-            pass                                    
+        if not IS_WINDOWS:
+            try:
+                os.chmod(server_path, 0o755)
+            except Exception:
+                pass
 
-        server_process = subprocess.Popen(
-            [server_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            stdin=subprocess.PIPE,
-            bufsize=-1
-        )
+        popen_kwargs = {
+            'stdin': subprocess.PIPE,
+            'stdout': subprocess.PIPE,
+            'stderr': subprocess.STDOUT,
+            'bufsize': -1
+        }
+        if IS_WINDOWS:
+            popen_kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
+            si = subprocess.STARTUPINFO()
+            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            si.wShowWindow = 1
+            popen_kwargs['startupinfo'] = si
 
+        proc = subprocess.Popen([server_path], **popen_kwargs)
+        proc_pid = proc.pid
+
+        server_process = proc
         server_state['running'] = True
-        server_state['pid'] = server_process.pid
+        server_state['pid'] = proc_pid
         server_state['start_time'] = time.time()
         server_state['attached'] = False
         panel_connector_last_heartbeat = 0.0
 
-                                                      
+        save_pid(proc_pid)
+
+                                                       
         settings = parse_settings_xml()
         configured_resources = settings.get('resources', []) if settings else []
         configured_addons = settings.get('addons', []) if settings else []
@@ -2300,14 +2317,12 @@ def start_server(username):
         for res_name in list(configured_resources) + list(configured_addons):
             resource_states[res_name] = 'started'
 
-        save_pid(server_process.pid)
-
         add_console_line(f'=== SERVER STARTED BY {username.upper()} ===', username)
-        add_console_line(f'PID: {server_process.pid}', username)
+        add_console_line(f'PID: {proc_pid}', username)
         discord_runtime.send_warning(f'[ONLINE] Server started by {username}')
         discord_runtime.request_status_refresh(force=True)
 
-        log_user_action(username, 'START_SERVER', f'PID: {server_process.pid}')
+        log_user_action(username, 'START_SERVER', f'PID: {proc_pid}')
 
         monitor_thread = threading.Thread(target=monitor_process, daemon=True)
         monitor_thread.start()
@@ -2612,7 +2627,7 @@ def _cleanup_setup_downloads():
 def ensure_server_files():
     global config
 
-    server_path = Path(config.get('server_path', './HPNMP/HappMP'))
+    server_path = Path(config.get('server_path', f'./HPNMP/{SERVER_BINARY}'))
     if server_path.exists():
         _setup_update(message='Server executable already present, skipping download')
         if _is_unknown_version_value((config or {}).get('happiness_version')):
@@ -2623,7 +2638,8 @@ def ensure_server_files():
         return
 
     _setup_update(step='Downloading server files', message='Downloading HappinessMP server files...')
-    zip_path = SETUP_DOWNLOAD_DIR / 'HappinessMP_Server_1.8.7_Linux.zip'
+    zip_name = 'HappinessMP_Server_Windows.zip' if IS_WINDOWS else 'HappinessMP_Server_1.8.7_Linux.zip'
+    zip_path = SETUP_DOWNLOAD_DIR / zip_name
     downloaded_url = _download_with_progress(SETUP_SERVER_ZIP_URL, zip_path, 25, 55, 'Server files')
 
     extract_dir = SETUP_DOWNLOAD_DIR / 'server_extract'
@@ -2634,16 +2650,17 @@ def ensure_server_files():
     with zipfile.ZipFile(zip_path, 'r') as zf:
         zf.extractall(extract_dir)
 
-    server_bin = _find_file(extract_dir, 'HappinessMP.Server.out')
+    server_bin_name = 'HappinessMP.Server.exe' if IS_WINDOWS else 'HappinessMP.Server.out'
+    server_bin = _find_file(extract_dir, server_bin_name)
     if not server_bin:
-        raise RuntimeError('HappinessMP.Server.out not found in extracted server files')
+        raise RuntimeError(f'{server_bin_name} not found in extracted server files')
 
     server_root = server_bin.parent
     target_dir = Path('./HPNMP')
     _merge_tree(server_root, target_dir)
 
-    src = target_dir / 'HappinessMP.Server.out'
-    dst = target_dir / 'HappMP'
+    src = target_dir / server_bin_name
+    dst = target_dir / SERVER_BINARY
     if src.exists():
         if dst.exists():
             dst.unlink()
@@ -2651,10 +2668,11 @@ def ensure_server_files():
     elif not dst.exists():
         raise RuntimeError('Server executable missing after extraction')
 
-    try:
-        os.chmod(dst, 0o755)
-    except Exception:
-        pass
+    if not IS_WINDOWS:
+        try:
+            os.chmod(dst, 0o755)
+        except Exception:
+            pass
 
     resolved_zip_url = str(downloaded_url or SETUP_SERVER_ZIP_URL or '').strip()
     detected_version = _guess_version_from_url(resolved_zip_url)
@@ -3229,8 +3247,8 @@ def api_setup():
             ensure_server_files()
 
                                                     
-            config['server_path'] = './HPNMP/HappMP'
-            config['server_name'] = 'HappMP'
+            config['server_path'] = f'./HPNMP/{SERVER_BINARY}'
+            config['server_name'] = SERVER_BINARY
             storage.save_config(config)
 
                                                        
@@ -5067,6 +5085,8 @@ def api_command():
             add_console_line(f'> {command}', session['username'])
             log_user_action(session['username'], 'COMMAND', command)
             return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'message': 'Console not available (detached process)'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -5180,10 +5200,12 @@ def api_update_start():
     })
 
     try:
+        popen_kwargs = {'stdout': subprocess.DEVNULL, 'stderr': subprocess.DEVNULL}
+        if IS_WINDOWS:
+            popen_kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
         subprocess.Popen(
             [sys.executable, 'updater.py', '--job', str(UPDATE_JOB_FILE)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            **popen_kwargs
         )
     except Exception as e:
         return jsonify({'success': False, 'message': f'Failed to start updater: {e}'}), 500
