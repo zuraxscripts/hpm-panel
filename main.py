@@ -3,7 +3,6 @@ import json
 import subprocess
 import sys
 import os
-import signal
 import time
 from pathlib import Path
 
@@ -13,6 +12,8 @@ DEFAULT_PANEL_PORT = 20000
 
 processes = []
 RESTART_FLAG = Path("data") / "restart.flag"
+
+IS_WINDOWS = (os.name == 'nt')
 
 
 def _parse_port(value):
@@ -71,7 +72,7 @@ def shutdown(signum=None, frame=None):
     for proc in processes:
         if proc.poll() is None:
             proc.terminate()
-                                           
+
     for proc in processes:
         try:
             proc.wait(timeout=5)
@@ -84,7 +85,15 @@ def shutdown(signum=None, frame=None):
         except Exception:
             pass
         print("[INFO] Restart flag detected, restarting...")
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        if IS_WINDOWS:
+            subprocess.Popen(
+                [sys.executable] + sys.argv,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+            )
+        else:
+            os.execv(sys.executable, [sys.executable] + sys.argv)
     sys.exit(0)
 
 
@@ -99,25 +108,26 @@ def main():
     )
     args = parser.parse_args()
 
-                              
-    signal.signal(signal.SIGINT, shutdown)
-    signal.signal(signal.SIGTERM, shutdown)
+    if not IS_WINDOWS:
+        import signal
+        signal.signal(signal.SIGINT, shutdown)
+        signal.signal(signal.SIGTERM, shutdown)
 
     print("=" * 55)
     print("  HappinessMP Server Manager")
     print("=" * 55)
     print()
 
-                                  
     install_dependencies()
     print()
 
-                                     
     print(f"[INFO] Starting Web Control Panel on port {args.port}...")
+    popen_kwargs = {'stdout': sys.stdout, 'stderr': sys.stderr}
+    if IS_WINDOWS:
+        popen_kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
     web_proc = subprocess.Popen(
         [sys.executable, "server_manager.py", "--port", str(args.port)],
-        stdout=sys.stdout,
-        stderr=sys.stderr,
+        **popen_kwargs
     )
     processes.append(web_proc)
 
@@ -129,7 +139,6 @@ def main():
     print("=" * 55)
     print()
 
-                                                                        
     try:
         while True:
             for proc in processes:

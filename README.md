@@ -1,9 +1,9 @@
 <div align="center">
   <img src="templates/logo.png" alt="HappinessMP logo" width="160" />
 
-  <h1>HMP Panel</h1>
+  <h1>HMP Panel for Windows</h1>
 
-  <p><strong>Web control panel for HappinessMP servers on Linux.</strong></p>
+  <p><strong>Web control panel for HappinessMP servers on Windows.</strong></p>
 
   <p>
     Start the server, watch the console, edit files, manage players, schedule restarts,
@@ -11,10 +11,10 @@
   </p>
 
   <p>
-    <img alt="Linux x86_64 target" src="https://img.shields.io/badge/Target-Linux%20x86__64-101827?style=for-the-badge&logo=linux&logoColor=white">
+    <img alt="Windows target" src="https://img.shields.io/badge/Target-Windows%2010%2F11%20%7C%20Server-0078D6?style=for-the-badge&logo=windows&logoColor=white">
     <img alt="Python 3.9+" src="https://img.shields.io/badge/Python-3.9%2B-2563eb?style=for-the-badge&logo=python&logoColor=white">
     <img alt="MySQL/MariaDB" src="https://img.shields.io/badge/Database-MySQL%2FMariaDB-16a34a?style=for-the-badge">
-    <img alt="Pterodactyl egg included" src="https://img.shields.io/badge/Pterodactyl-egg%20included-f59e0b?style=for-the-badge">
+    <img alt="One-click installer" src="https://img.shields.io/badge/Install-one--click%20.bat-f59e0b?style=for-the-badge">
   </p>
 
   <p>
@@ -24,11 +24,11 @@
     <span>&nbsp;/&nbsp;</span>
     <a href="#first-run">First Run</a>
     <span>&nbsp;/&nbsp;</span>
-    <a href="#pterodactyl">Pterodactyl</a>
+    <a href="#files-and-scripts">Files &amp; Scripts</a>
     <span>&nbsp;/&nbsp;</span>
     <a href="#configuration">Configuration</a>
     <span>&nbsp;/&nbsp;</span>
-    <a href="#windows-version">Windows Version</a>
+    <a href="#linux-version">Linux Version</a>
     <span>&nbsp;/&nbsp;</span>
     <a href="#troubleshooting">Troubleshooting</a>
   </p>
@@ -37,10 +37,10 @@
 ---
 
 > [!IMPORTANT]
-> HMP Panel targets Linux `x86_64` / `amd64` HappinessMP server deployments. For Windows, see the <a href="#windows-version">Windows Version</a> section.
+> This is the **Windows edition** of HMP Panel. It runs on Windows 10/11 and Windows Server 2019+. For Linux, see the <a href="#linux-version">Linux Version</a> section.
 
 > [!NOTE]
-> HMP Panel requires MySQL or MariaDB for data storage.
+> HMP Panel for Windows requires MySQL or MariaDB for data storage (XAMPP, WampServer, or a standalone DB server).
 
 ## What It Does
 
@@ -69,7 +69,7 @@ HMP Panel is a browser-based operations panel for a HappinessMP server. It combi
 | --- | --- |
 | Server lifecycle | Start, stop, restart, auto-start, process detection, uptime, CPU/RAM samples |
 | Console | Live output, history, command input, command logging |
-| Setup | PIN-protected first run, admin account creation, HappinessMP server download, hpm-connector installation |
+| Setup | PIN-protected first run, admin account creation, HappinessMP Windows server download, hpm-connector installation |
 | Storage | MySQL/MariaDB with encrypted credentials, optional JSON fallback files |
 | HappinessMP config | Visual management for `settings.xml` fields |
 | Files | Browse, read, edit, upload, download, rename, delete, zip, unzip, create folders |
@@ -80,55 +80,62 @@ HMP Panel is a browser-based operations panel for a HappinessMP server. It combi
 | Logs | Per-user action logs and console action tracking |
 | Discord | Optional bot token, warning channel, customizable status embed JSON with buttons/colors |
 | Updates | Panel update checks from GitHub and HappinessMP server archive updates |
-| Pterodactyl | Ready-to-import egg with Debian-based Python container |
 
 ## Requirements
 
 | Requirement | Notes |
 | --- | --- |
-| OS | Linux (Ubuntu 22.04/24.04 recommended) |
-| Architecture | `x86_64` / `amd64` |
-| Python | `3.9+` (3.11+ recommended) |
-| Database | MySQL or MariaDB server |
-| Python packages | Installed from [`requirements.txt`](./requirements.txt) |
-| Tools | `git`, `python3`, `python3-venv`, `python3-pip` |
-| Network | Needed during first setup to download the HappinessMP Linux server archive |
+| OS | Windows 10/11 or Windows Server 2019+ |
+| Python | `3.9+` (3.11+ recommended) — [Download Python](https://www.python.org/downloads/) |
+| Database | MySQL or MariaDB (XAMPP, WampServer, or standalone) |
+| Network | Needed during first setup to download the HappinessMP Windows server archive |
 | Internet | Required for update checks and hpm-connector downloads |
+
+> **Important:** When installing Python, check **"Add Python to PATH"** at the bottom of the installer.
 
 ## Quick Start
 
-```bash
-# 1. Install system packages
-sudo apt update
-sudo apt install -y git python3 python3-venv python3-pip mariadb-server
+### 1. Install a Database
 
-# 2. Create a database
-sudo mysql -e "CREATE DATABASE happinessmp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-sudo mysql -e "CREATE USER 'happinessmp'@'127.0.0.1' IDENTIFIED BY 'CHANGE_ME_STRONG_PASSWORD';"
-sudo mysql -e "GRANT ALL PRIVILEGES ON happinessmp.* TO 'happinessmp'@'127.0.0.1';"
-sudo mysql -e "FLUSH PRIVILEGES;"
+You need MySQL or MariaDB. The easiest option is **XAMPP**:
 
-# 3. Clone and install
-git clone https://github.com/zuraxscripts/hmp-panel.git
-cd hmp-panel
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+1. Download from [apachefriends.org](https://www.apachefriends.org/)
+2. Install and start Apache + MySQL from the XAMPP Control Panel
+3. Open phpMyAdmin at `http://localhost/phpmyadmin`
+4. Create a database (e.g. `happinessmp`) and a user with full privileges
 
-# 4. Start the panel
-python3 main.py --port 20000
+### 2. Install the Panel
+
+1. Extract the panel files to any folder (e.g. `C:\HMP-Panel`)
+2. **Double-click `install.bat`** — it will:
+   - Check your Python installation
+   - Create a virtual environment (`.venv`)
+   - Install all Python dependencies
+   - Create start scripts
+
+### 3. Start the Panel
+
+**Option A — Console window (recommended for first run):**
+Double-click **`start.bat`**
+
+**Option B — Background (no visible window):**
+Double-click **`start_hidden.vbs`**
+
+**Option C — Custom port:**
+Open a terminal in the panel folder and run:
+```batch
+start.bat --port 20000
 ```
 
-Open the panel:
+### 4. Open the Panel
 
 ```text
-http://YOUR_SERVER_IP:20000
+http://localhost:20000
 ```
 
 ## First Run
 
-The first launch is protected by a setup PIN printed in the console.
+The first launch is protected by a setup PIN visible in the console (or in `start.bat` window).
 
 Setup asks for:
 
@@ -142,7 +149,7 @@ Setup then performs:
 | --- | --- |
 | Database | Saves encrypted DB credentials and creates required tables |
 | Secret | Generates the panel secret if still using the default |
-| Server files | Downloads the official HappinessMP Linux x64 archive when missing |
+| Server files | Downloads the official HappinessMP Windows archive when missing |
 | hpm-connector | Downloads and installs the latest connector release |
 | Config | Updates connector config with the panel secret and host |
 | User | Creates the first admin account |
@@ -152,136 +159,51 @@ Default paths:
 | Item | Value |
 | --- | --- |
 | Panel port | `20000` |
-| Server executable | `./HPNMP/HappMP` |
-| Server directory | `./HPNMP/` |
-| Panel config | `./panel_config.json` |
-| Runtime data | `./data/` |
-| Logs | `./data/logs/` |
+| Server executable | `.\HPNMP\HappMP.exe` |
+| Server directory | `.\HPNMP\` |
+| Panel config | `.\panel_config.json` |
+| Runtime data | `.\data\` |
+| Logs | `.\data\logs\` |
 
-## Ubuntu Service
-
-Create a dedicated user:
-
-```bash
-sudo useradd -r -m -s /usr/sbin/nologin hpm
-```
-
-Install the app:
-
-```bash
-sudo mkdir -p /opt/hmp-panel
-sudo chown -R hpm:hpm /opt/hmp-panel
-sudo -u hpm git clone https://github.com/zuraxscripts/hmp-panel.git /opt/hmp-panel/app
-sudo -u hpm python3 -m venv /opt/hmp-panel/app/.venv
-sudo -u hpm /opt/hmp-panel/app/.venv/bin/pip install --upgrade pip
-sudo -u hpm /opt/hmp-panel/app/.venv/bin/pip install -r /opt/hmp-panel/app/requirements.txt
-```
-
-Create `/etc/systemd/system/hmp-panel.service`:
-
-```ini
-[Unit]
-Description=HMP Panel
-After=network.target mariadb.service
-
-[Service]
-Type=simple
-User=hpm
-Group=hpm
-WorkingDirectory=/opt/hmp-panel/app
-Environment=PANEL_PORT=20000
-ExecStart=/opt/hmp-panel/app/.venv/bin/python /opt/hmp-panel/app/main.py --port 20000
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable it:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now hmp-panel
-sudo systemctl status hmp-panel
-```
-
-Follow logs:
-
-```bash
-journalctl -u hmp-panel -f
-```
-
-## Nginx Reverse Proxy
-
-HMP Panel uses Socket.IO, so the proxy must pass WebSocket upgrade headers.
-
-```nginx
-server {
-    listen 80;
-    server_name panel.example.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:20000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-```
-
-Useful environment flags behind HTTPS:
-
-```bash
-PANEL_FORCE_HTTPS=true
-PANEL_SESSION_COOKIE_SECURE=true
-```
-
-## Pterodactyl
-
-Use the included egg when deploying through Pterodactyl:
+## Files and Scripts
 
 | File | Purpose |
 | --- | --- |
-| [`egg-hmp-happinessmp.json`](./egg-hmp-happinessmp.json) | Ready-to-import Pterodactyl egg |
-
-The egg does the following:
-
-| Step | Details |
-| --- | --- |
-| Install | Installs `git`, `curl`, and `python3` via `apt` |
-| Clone | Clones this repository |
-| Startup | Starts `python3 main.py --port {{PORT}}` |
-
-Important Pterodactyl notes:
-
-| Topic | Note |
-| --- | --- |
-| Architecture | Use Linux `amd64` / `x86_64` nodes |
-| External database | Required (MySQL/MariaDB) |
-| Internet | First setup needs outbound access for HappinessMP files and hpm-connector |
-| Windows nodes | Not supported |
+| `install.bat` | **One-click installer** — creates venv, installs dependencies |
+| `start.bat` | Starts the panel in a console window |
+| `start_hidden.vbs` | Starts the panel silently in the background (no window) |
+| `stop_panel.bat` | Stops any running panel Python processes |
+| `main.py` | Launcher — installs deps, spawns server manager, handles restart |
+| `server_manager.py` | Flask/Socket.IO panel — all routes, setup, server control |
+| `storage.py` | Storage layer (MySQL + JSON fallback) |
+| `db.py` | Database connection, encrypted credentials, schema |
+| `updater.py` | Panel and HappinessMP updater worker |
+| `requirements.txt` | Python dependencies |
+| `panel_version.json` | Current panel version |
+| `update_config.json` | Default update sources |
+| `happiness_update.json` | HappinessMP Windows update metadata |
+| `templates/` | Panel pages and UI assets |
+| `locales/` | English and Czech translations |
 
 ## Configuration
 
-### CLI and Environment
+### Port
 
-```bash
-python3 main.py --port 20000
+**Option 1 — CLI argument:**
+```batch
+start.bat --port 8080
 ```
 
-The panel port can also come from environment variables:
-
-```bash
-PANEL_PORT=20000 python3 main.py
-PORT=20000 python3 main.py
+**Option 2 — Environment variable:**
+```batch
+set PANEL_PORT=8080
+start.bat
 ```
 
-Runtime environment variables:
+**Option 3 — Config file:**
+Edit `panel_config.json` after first run and change `panel_port`.
+
+### Environment Variables
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -290,7 +212,6 @@ Runtime environment variables:
 | `PANEL_ACCESS_LOGS` | `false` in production | Controls HTTP access logging |
 | `PANEL_FORCE_HTTPS` | `false` | Redirects HTTP to HTTPS when enabled |
 | `PANEL_SESSION_COOKIE_SECURE` | follows HTTPS flag | Marks session cookie secure |
-| `PANEL_SOCKETIO_ASYNC_MODE` | auto/threading | Forces Socket.IO async backend |
 | `HAPPINESS_DB_HOST` | `127.0.0.1` | Database server host |
 | `HAPPINESS_DB_PORT` | `3306` | Database server port |
 | `HAPPINESS_DB_USER` | `happinessmp` | Database user |
@@ -301,33 +222,47 @@ Runtime environment variables:
 | `HPM_HAPPINESS_UPDATE_URL` | default | HappinessMP update metadata URL override |
 | `HPM_UPDATE_INTERVAL_MINUTES` | `10` | Background update check interval |
 
-### Repository Files
+## Background Service (Windows)
 
-| Path | Purpose |
+### Option A — Task Scheduler (recommended)
+
+1. Open **Task Scheduler**
+2. Create a new task:
+   - **Trigger:** At system startup
+   - **Action:** Start a program
+   - **Program:** `wscript.exe`
+   - **Arguments:** `"C:\HMP-Panel\start_hidden.vbs"`
+3. Save and enable the task
+
+### Option B — NSSM (Non-Sucking Service Manager)
+
+1. Download NSSM from [nssm.cc](https://nssm.cc/)
+2. Install as a service:
+   ```batch
+   nssm install HMPPanel "C:\HMP-Panel\.venv\Scripts\python.exe" "C:\HMP-Panel\main.py" --port 20000
+   nssm start HMPPanel
+   ```
+
+## Discord Bot Integration
+
+Configure in the web panel under **Settings > Discord Integration**:
+
+| Field | Purpose |
 | --- | --- |
-| [`main.py`](./main.py) | Launcher, dependency check, child process supervision |
-| [`server_manager.py`](./server_manager.py) | Flask/Socket.IO panel, routes, setup, server control |
-| [`storage.py`](./storage.py) | Storage layer (MySQL + JSON fallback) |
-| [`db.py`](./db.py) | Database connection, encrypted credentials, schema |
-| [`updater.py`](./updater.py) | Panel and HappinessMP updater worker |
-| [`requirements.txt`](./requirements.txt) | Python dependencies |
-| [`panel_version.json`](./panel_version.json) | Current panel version |
-| [`update_config.json`](./update_config.json) | Default update sources |
-| [`happiness_update.json`](./happiness_update.json) | HappinessMP update metadata |
-| [`egg-hmp-happinessmp.json`](./egg-hmp-happinessmp.json) | Pterodactyl egg |
-| [`templates/`](./templates) | Panel pages and UI assets |
-| [`locales/`](./locales) | English and Czech translations |
+| Token | Discord bot token |
+| Guild ID | Discord server (guild) ID |
+| Warnings Channel | Channel for player warning notifications |
+| Status Embed | Customizable embed for server status display |
 
 ## In-Game Bridge
 
-During setup, HMP Panel installs the hpm-connector bridge package:
+During setup, HMP Panel installs the hpm-connector bridge:
 
 | Component | Location | Purpose |
 | --- | --- | --- |
-| hpm-connector | `HPNMP/resources/hpm-connector/` | Sends player sync, heartbeat, and receives pending actions |
-| Resource config | `HPNMP/settings.xml` | Updated to load the connector resource |
-
-The bridge uses a generated `panelSecret` stored in `panel_config.json` and mirrored into the connector's `server.lua`.
+| hpm-connector | `HPNMP\resources\hpm-connector\` | Sends player sync, heartbeat, and receives pending actions |
+| Connector binary | `hpm-connector.dll` (Windows) | Compiled connector module |
+| Resource config | `HPNMP\settings.xml` | Updated to load the connector resource |
 
 ## Updating
 
@@ -338,96 +273,81 @@ HMP Panel can check and apply updates for:
 | Panel | GitHub repository from `update_config.json` or `HPM_PANEL_REPO` |
 | HappinessMP server | Archive URL from `happiness_update.json` or `HPM_HAPPINESS_UPDATE_URL` |
 
-The updater stores state in `data/update_status.json`, `data/update_job.json`, and `data/update.log`.
+The updater stores state in `data\update_status.json`, `data\update_job.json`, and `data\update.log`.
+
+## Linux Version
+
+A Linux-adapted version of HMP Panel is available for production server deployments:
+
+- **Ubuntu 22.04/24.04 recommended**
+- Runs the HappinessMP **Linux** server binary (`HappMP`)
+- systemd service for automatic startup
+- Pterodactyl egg included
+
+👉 **[HMP Panel for Linux](https://github.com/zuraxscripts/hmp-panel)**
+
+Key differences from the Windows version:
+
+| Aspect | Windows | Linux |
+| --- | --- | --- |
+| Server binary | `HappMP.exe` | `HappMP` |
+| Connector | `hpm-connector.dll` | `hpm-connector.so` |
+| Virtual env | `.venv\Scripts\activate` | `source .venv/bin/activate` |
+| Installer | `install.bat` one-click | Manual commands |
+| Background run | `start_hidden.vbs` / Task Scheduler | systemd service |
+| Start command | `start.bat` or `python main.py` | `python3 main.py` |
+| Setup URL | Windows server zip | Linux server zip |
+| Pterodactyl | Not supported | Egg included |
 
 ## Security Notes
 
 | Area | Recommendation |
 | --- | --- |
 | Admin account | Use a strong password and keep admin users limited |
-| Public exposure | Put the panel behind firewall rules or a reverse proxy |
-| HTTPS | Use HTTPS when the panel is reachable over the internet |
+| Public exposure | Put the panel behind Windows Firewall rules or a reverse proxy |
+| HTTPS | Use HTTPS when the panel is reachable over the internet (e.g. Nginx or Caddy on Windows) |
 | Panel secret | Do not publish `panel_config.json` or connector `server.lua` |
 | Database | Use a strong database password and restrict access to `127.0.0.1` |
 | Permissions | Give non-admin users only the permissions they need |
 
-## Windows Version
-
-A Windows-adapted version of HMP Panel is available:
-
-- **Windows 10/11 and Windows Server 2019+**
-- Runs the HappinessMP **Windows** server binary (`HappMP.exe`)
-- Uses `.bat` scripts for installation and startup
-- Same features as the Linux version
-
-👉 **[HMP Panel for Windows](https://github.com/zuraxscripts/hmp-panel-windows)**
-
-Key differences from the Linux version:
-
-| Aspect | Linux | Windows |
-| --- | --- | --- |
-| Server binary | `HappMP` | `HappMP.exe` |
-| Connector | `hpm-connector.so` | `hpm-connector.dll` |
-| Virtual env | `source .venv/bin/activate` | `.venv\Scripts\activate` |
-| Installer | Manual commands | `install.bat` one-click |
-| Background run | systemd service | `start_hidden.vbs` |
-| Start command | `python3 main.py` | `start.bat` or `python main.py` |
-| Setup URL | Linux server zip | Windows server zip |
-
 ## Troubleshooting
 
-### Panel does not open
+### "Python is not recognized" or "python is not found"
 
-Check whether the process is listening:
+Reinstall Python from [python.org](https://www.python.org/downloads/) and make sure **"Add Python to PATH"** is checked during installation. Restart your terminal after installation.
 
-```bash
-ss -tulpn | grep 20000
-```
+### Panel does not start
 
-Check service logs if using systemd:
-
-```bash
-journalctl -u hmp-panel -f
-```
+Check:
+- No other application is using port 20000
+- You ran `install.bat` first (creates the virtual environment)
+- Windows Firewall is not blocking Python
+- If using XAMPP, make sure MySQL is started in the XAMPP Control Panel
 
 ### Setup cannot connect to the database
 
 Make sure:
+- MySQL/MariaDB is running (check XAMPP/WampServer control panel)
+- The database exists and the user has privileges
+- The host is correct (use `127.0.0.1` for local DB)
+- The port is correct (default is `3306`)
 
-- MariaDB/MySQL is running
-- The database exists
-- The username, password, host, and port are correct
-- The DB user has privileges on the selected database
+### "Module not found" errors
 
-Quick check:
+Run `install.bat` again to reinstall dependencies.
 
-```bash
-mysql -h 127.0.0.1 -u happinessmp -p happinessmp
-```
+### Console shows "detached process" or commands don't work
 
-### Server executable is missing
+The server process might have been started externally or the stdin pipe was not connected. Restart the server from the panel to re-attach.
 
-The default path is:
+### Server shows wrong version
 
-```text
-./HPNMP/HappMP
-```
+The panel downloads the version specified in `happiness_update.json`. Make sure that file points to the correct Windows server archive URL.
 
-If the file is missing, rerun setup or check whether outbound downloads from the HappinessMP CDN are blocked.
+### How do I stop the panel?
 
-### WebSocket/live console issues behind Nginx
+Run **`stop_panel.bat`** or press `Ctrl+C` in the `start.bat` console window. For background mode, run `stop_panel.bat` or use Task Manager to end the Python processes.
 
-Confirm the proxy passes these headers:
+### Can I run this on Linux?
 
-```nginx
-proxy_set_header Upgrade $http_upgrade;
-proxy_set_header Connection "upgrade";
-```
-
-### Running on Windows
-
-This Linux version does not support Windows. Use the **[Windows version](https://github.com/zuraxscripts/hmp-panel-windows)** instead.
-
-### Running on ARM
-
-ARM / ARM64 architectures are not supported.
+No. Use the **[Linux version](https://github.com/zuraxscripts/hmp-panel)** instead.

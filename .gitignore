@@ -1,1 +1,29 @@
-/__pycache__
+# Virtual environment
+.venv/
+venv/
+
+# Data directory (runtime files)
+data/
+
+# Game server files
+HPNMP/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# VS Code
+.vscode/
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Windows shortcuts
+*.lnk
+
+# Panel config (generated on first run)
+panel_config.json
