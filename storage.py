@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import db
@@ -11,6 +12,9 @@ BANS_FILE = DATA_DIR / 'bans.json'
 PLAYER_PROFILES_FILE = DATA_DIR / 'player_profiles.json'
 
 DATA_DIR.mkdir(exist_ok=True)
+
+IS_WINDOWS = (os.name == 'nt')
+SERVER_BINARY = 'HappMP.exe' if IS_WINDOWS else 'HappMP'
 
 
 def _default_status_embed_template():
@@ -50,11 +54,11 @@ def _default_status_embed_template():
 
 def _default_status_config():
     return {
-        "onlineString": "🟢 Online",
+        "onlineString": " Online",
         "onlineColor": "#0BA70B",
-        "partialString": "🟡 Partial",
+        "partialString": " Partial",
         "partialColor": "#FFF100",
-        "offlineString": "🔴 Offline",
+        "offlineString": " Offline",
         "offlineColor": "#A70B28",
         "buttons": []
     }
@@ -124,7 +128,6 @@ def _default_panel_config():
 def _json_load(path: Path, default):
     try:
         if path.exists():
-                                                                          
             with open(path, 'r', encoding='utf-8-sig') as f:
                 return json.load(f)
     except Exception:
@@ -270,7 +273,6 @@ def load_users():
         try:
             return _db_load_users()
         except Exception:
-                                                   
             pass
     return _json_load(USERS_FILE, {})
 
@@ -284,8 +286,8 @@ def save_users(users: dict):
 
 def load_config():
     default_config = {
-        'server_path': './HPNMP/HappMP',
-        'server_name': 'HappMP',
+        'server_path': f'./HPNMP/{SERVER_BINARY}',
+        'server_name': SERVER_BINARY,
         'log_file': './HPNMP/server.log',
         'auto_restart': False,
         'restart_delay': 5,
@@ -416,28 +418,24 @@ def migrate_json_to_db(force: bool = False):
         return
     db.ensure_schema()
 
-           
     if USERS_FILE.exists():
         users = _json_load(USERS_FILE, {})
         if users:
             if force or _db_users_count() == 0:
                 _db_save_users(users)
 
-                   
     if CONFIG_FILE.exists():
         cfg = _json_load(CONFIG_FILE, None)
         if cfg is not None:
             if force or _db_get_app_config('server') is None:
                 _db_set_app_config('server', cfg)
 
-                  
     if PANEL_CONFIG_FILE.exists():
         cfg = _json_load(PANEL_CONFIG_FILE, None)
         if cfg is not None:
             if force or _db_get_app_config('panel') is None:
                 _db_set_app_config('panel', cfg)
 
-          
     if BANS_FILE.exists():
         bans = _json_load(BANS_FILE, [])
         if bans:
