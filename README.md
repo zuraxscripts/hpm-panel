@@ -109,7 +109,7 @@ sudo mysql -e "GRANT ALL PRIVILEGES ON happinessmp.* TO 'happinessmp'@'127.0.0.1
 sudo mysql -e "FLUSH PRIVILEGES;"
 
 # 3. Clone and install
-git clone https://github.com/zuraxscripts/hmp-panel.git
+git clone -b linux https://github.com/zuraxscripts/hmp-panel.git
 cd hmp-panel
 python3 -m venv .venv
 source .venv/bin/activate
@@ -171,7 +171,7 @@ Install the app:
 ```bash
 sudo mkdir -p /opt/hmp-panel
 sudo chown -R hpm:hpm /opt/hmp-panel
-sudo -u hpm git clone https://github.com/zuraxscripts/hmp-panel.git /opt/hmp-panel/app
+sudo -u hpm git clone -b linux https://github.com/zuraxscripts/hmp-panel.git /opt/hmp-panel/app
 sudo -u hpm python3 -m venv /opt/hmp-panel/app/.venv
 sudo -u hpm /opt/hmp-panel/app/.venv/bin/pip install --upgrade pip
 sudo -u hpm /opt/hmp-panel/app/.venv/bin/pip install -r /opt/hmp-panel/app/requirements.txt
@@ -360,7 +360,7 @@ A Windows-adapted version of HMP Panel is available:
 - Uses `.bat` scripts for installation and startup
 - Same features as the Linux version
 
-👉 **[HMP Panel for Windows](https://github.com/zuraxscripts/hmp-panel-windows)**
+👉 **[HMP Panel for Windows](https://github.com/zuraxscripts/hmp-panel/tree/windows)**
 
 Key differences from the Linux version:
 
@@ -426,7 +426,7 @@ proxy_set_header Connection "upgrade";
 
 ### Running on Windows
 
-This Linux version does not support Windows. Use the **[Windows version](https://github.com/zuraxscripts/hmp-panel-windows)** instead.
+This Linux version does not support Windows. Use the **[Windows version](https://github.com/zuraxscripts/hmp-panel/tree/windows)** instead.
 
 ### Running on ARM
 
