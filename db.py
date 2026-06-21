@@ -6,7 +6,7 @@ import pymysql
 
 try:
     from cryptography.fernet import Fernet
-except Exception:
+except Exception:                                                
     Fernet = None
 
 DATA_DIR = Path('./data')
@@ -14,8 +14,6 @@ DB_CONFIG_FILE = DATA_DIR / 'db.json'
 DB_KEY_FILE = DATA_DIR / 'db.key'
 
 DATA_DIR.mkdir(exist_ok=True)
-
-IS_WINDOWS = (os.name == 'nt')
 
 
 def _env_config():
@@ -50,11 +48,10 @@ def _get_fernet():
     else:
         key = Fernet.generate_key()
         DB_KEY_FILE.write_bytes(key)
-        if not IS_WINDOWS:
-            try:
-                os.chmod(DB_KEY_FILE, 0o600)
-            except Exception:
-                pass
+        try:
+            os.chmod(DB_KEY_FILE, 0o600)
+        except Exception:
+            pass
     return Fernet(key)
 
 
@@ -89,11 +86,10 @@ def save_db_config(cfg: dict):
         'database': database
     }
     DB_CONFIG_FILE.write_text(json.dumps(payload, indent=4), encoding='utf-8')
-    if not IS_WINDOWS:
-        try:
-            os.chmod(DB_CONFIG_FILE, 0o600)
-        except Exception:
-            pass
+    try:
+        os.chmod(DB_CONFIG_FILE, 0o600)
+    except Exception:
+        pass
 
 
 def load_db_config():
@@ -197,7 +193,7 @@ def ensure_schema():
                 )
                 """
             )
-
+                                                     
             cur.execute("SHOW COLUMNS FROM users LIKE 'display_name'")
             if not cur.fetchone():
                 cur.execute("ALTER TABLE users ADD COLUMN display_name VARCHAR(64)")
