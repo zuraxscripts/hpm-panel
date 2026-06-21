@@ -336,9 +336,10 @@ UPDATE_CONFIG_FILE = Path('./update_config.json')
 UPDATE_STATUS_FILE = DATA_DIR / 'update_status.json'
 UPDATE_JOB_FILE = DATA_DIR / 'update_job.json'
 
+BRANCH = 'linux'
 DEFAULT_PANEL_REPO = 'zuraxscripts/hmp-panel'
-DEFAULT_UPDATE_CONFIG_URL = 'https://raw.githubusercontent.com/zuraxscripts/hmp-panel/main/update_config.json'
-DEFAULT_HAPPINESS_UPDATE_URL = 'https://raw.githubusercontent.com/zuraxscripts/hmp-panel/main/happiness_update.json'
+DEFAULT_UPDATE_CONFIG_URL = f'https://raw.githubusercontent.com/zuraxscripts/hmp-panel/{BRANCH}/update_config.json'
+DEFAULT_HAPPINESS_UPDATE_URL = f'https://raw.githubusercontent.com/zuraxscripts/hmp-panel/{BRANCH}/happiness_update.json'
 DEFAULT_UPDATE_INTERVAL_MINUTES = 30
 
 update_state = {
