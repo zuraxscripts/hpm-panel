@@ -3,13 +3,16 @@ import json
 import os
 import shutil
 import subprocess
+import stat
 import sys
 import tempfile
 import time
 import urllib.request
 import zipfile
+import signal
 import re
 from pathlib import Path
+
 
 ROOT_DIR = Path(__file__).resolve().parent
 USER_AGENT = 'HPM-Panel-Updater/1.0'
@@ -20,11 +23,8 @@ DEFAULT_PANEL_PORT = 20000
 PANEL_PORT = DEFAULT_PANEL_PORT
 CONNECTOR_API_URL = 'https://api.github.com/repos/zuraxscripts/hmp-connector/releases/latest'
 
-DATA_DIR.mkdir(exist_ok=True)
 
-IS_WINDOWS = (os.name == 'nt')
-SERVER_BINARY = 'HappMP.exe' if IS_WINDOWS else 'HappMP'
-SERVER_BIN_SRC = 'HappinessMP.Server.exe' if IS_WINDOWS else 'HappinessMP.Server.out'
+DATA_DIR.mkdir(exist_ok=True)
 
 
 STATUS_TEMPLATE = {
@@ -48,193 +48,395 @@ def _coerce_panel_port(value):
     try:
         port = int(value)
     except (TypeError, ValueError):
-        raise argparse.ArgumentTypeError("Port must be an integer")
+        return DEFAULT_PANEL_PORT
     if port < 1 or port > 65535:
-        raise argparse.ArgumentTypeError("Port must be between 1 and 65535")
+        return DEFAULT_PANEL_PORT
     return port
 
 
-def _resolve_panel_port(job):
-    port = job.get('panel_port')
-    if port:
-        try:
-            return _coerce_panel_port(port)
-        except Exception:
-            pass
-    return DEFAULT_PANEL_PORT
+def _set_panel_port(value):
+    global PANEL_PORT
+    PANEL_PORT = _coerce_panel_port(value)
 
 
-def _load_server_config():
-    cfg_path = ROOT_DIR / 'data' / 'config.json'
-    try:
-        if cfg_path.exists():
-            return json.loads(cfg_path.read_text(encoding='utf-8'))
-    except Exception:
-        pass
-    return {}
+def _get_panel_host():
+    return f'http://127.0.0.1:{PANEL_PORT}'
 
 
-def _load_panel_config():
-    cfg_path = ROOT_DIR / 'panel_config.json'
-    try:
-        if cfg_path.exists():
-            return json.loads(cfg_path.read_text(encoding='utf-8'))
-    except Exception:
-        pass
-    return {}
-
-
-def _write_status():
-    _status['updated_at'] = time.time()
-    try:
-        STATUS_FILE.write_text(json.dumps(_status, indent=2), encoding='utf-8')
-    except Exception:
-        pass
-
-
-def _set_status(**kw):
-    for k, v in kw.items():
-        _status[k] = v
-    _write_status()
-
-
-def _log(msg):
-    ts = time.strftime('%Y-%m-%d %H:%M:%S')
-    line = f'[{ts}] {msg}'
-    _status['log'].append(line)
-    _write_status()
-    print(line, flush=True)
-
-
-def _download_with_progress(url, dest, start_pct, end_pct, label='file'):
-    _log(f'Downloading {label} from {url}...')
-    req = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        total = int(resp.headers.get('content-length', 0))
-        downloaded = 0
-        chunk_size = 8192
-        with open(dest, 'wb') as f:
-            while True:
-                chunk = resp.read(chunk_size)
-                if not chunk:
-                    break
-                f.write(chunk)
-                downloaded += len(chunk)
-                if total > 0:
-                    pct = start_pct + (end_pct - start_pct) * downloaded // total
-                    _set_status(progress=min(pct, end_pct))
-    _log(f'{label} downloaded')
-
-
-def _find_file(root: Path, target_name: str):
-    for p in root.rglob(target_name):
-        if p.name == target_name:
-            return p
+def _extract_port_from_cmdline(cmdline):
+    if not cmdline:
+        return None
+    for idx, part in enumerate(cmdline):
+        if part == '--port' and idx + 1 < len(cmdline):
+            return _coerce_panel_port(cmdline[idx + 1])
+        if part.startswith('--port='):
+            return _coerce_panel_port(part.split('=', 1)[1])
     return None
 
 
+def _resolve_panel_port(job: dict):
+    explicit = job.get('panel_port')
+    if explicit is not None:
+        return _coerce_panel_port(explicit)
+
+    pid = job.get('server_manager_pid')
+    if pid:
+        try:
+            import psutil
+            cmdline = psutil.Process(int(pid)).cmdline()
+            parsed = _extract_port_from_cmdline(cmdline)
+            if parsed is not None:
+                return parsed
+        except Exception:
+            pass
+
+    env_port = os.getenv('PANEL_PORT') or os.getenv('PORT')
+    if env_port:
+        return _coerce_panel_port(env_port)
+
+    panel_cfg = _load_panel_config()
+    if isinstance(panel_cfg, dict) and panel_cfg.get('panel_port') is not None:
+        return _coerce_panel_port(panel_cfg.get('panel_port'))
+
+    return DEFAULT_PANEL_PORT
+
+
+def _json_load(path: Path, default):
+    try:
+        if path.exists():
+            return json.loads(path.read_text(encoding='utf-8-sig'))
+    except Exception:
+        pass
+    return default
+
+
+def _json_save(path: Path, payload: dict):
+    tmp = path.with_suffix(path.suffix + '.tmp')
+    tmp.write_text(json.dumps(payload, indent=4), encoding='utf-8')
+    os.replace(tmp, path)
+
+
+def _log(message: str):
+    timestamp = time.strftime('%H:%M:%S')
+    line = f'[{timestamp}] {message}'
+    _status['message'] = message
+    _status['log'].append(line)
+    if len(_status['log']) > 200:
+        _status['log'] = _status['log'][-200:]
+    _status['updated_at'] = time.time()
+    _json_save(STATUS_FILE, _status)
+    try:
+        with open(LOG_FILE, 'a', encoding='utf-8') as f:
+            f.write(line + '\n')
+    except Exception:
+        pass
+
+
+def _set_status(**kwargs):
+    _status.update(kwargs)
+    _status['updated_at'] = time.time()
+    _json_save(STATUS_FILE, _status)
+
+
+def _download_with_progress(url: str, dest_path: Path, start_pct: int, end_pct: int, label: str):
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    req = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
+    with urllib.request.urlopen(req) as resp, open(dest_path, 'wb') as f:
+        total = resp.getheader('Content-Length')
+        try:
+            total = int(total) if total else None
+        except Exception:
+            total = None
+
+        downloaded = 0
+        last_tick = time.time()
+        while True:
+            chunk = resp.read(1024 * 256)
+            if not chunk:
+                break
+            f.write(chunk)
+            downloaded += len(chunk)
+            if total:
+                pct = start_pct + (downloaded / total) * (end_pct - start_pct)
+            else:
+                pct = min(end_pct, start_pct + 1)
+            if time.time() - last_tick > 0.5:
+                _set_status(progress=int(pct))
+                _log(f'{label}: {downloaded / (1024 * 1024):.1f} MB')
+                last_tick = time.time()
+        _set_status(progress=end_pct)
+        _log(f'{label}: download complete')
+
+
+def _find_file(root: Path, filename: str):
+    for p in root.rglob(filename):
+        return p
+    return None
+
+
+def _should_skip(rel_path: Path, skip_top: set, skip_files: set, skip_any: set):
+    parts = rel_path.parts
+    if not parts:
+        return False
+    if any(p in skip_any for p in parts):
+        return True
+    if parts[0] in skip_top:
+        return True
+    if len(parts) == 1 and parts[0] in skip_files:
+        return True
+    return False
+
+
+def _copy_tree(src_root: Path, dst_root: Path, skip_top: set, skip_files: set, skip_any: set):
+    for item in src_root.rglob('*'):
+        rel = item.relative_to(src_root)
+        if _should_skip(rel, skip_top, skip_files, skip_any):
+            continue
+        dest = dst_root / rel
+        if item.is_dir():
+            dest.mkdir(parents=True, exist_ok=True)
+            continue
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(item, dest)
+
+
+def _merge_resources(src_res: Path, dst_res: Path, replace_names: set):
+    dst_res.mkdir(parents=True, exist_ok=True)
+    for item in src_res.iterdir():
+        target = dst_res / item.name
+        if item.name in replace_names:
+            if target.exists():
+                shutil.rmtree(target, ignore_errors=True)
+            if item.is_dir():
+                shutil.copytree(item, target, dirs_exist_ok=True)
+            else:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(item, target)
+        else:
+            if target.exists():
+                continue
+            if item.is_dir():
+                shutil.copytree(item, target, dirs_exist_ok=True)
+            else:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(item, target)
+
+
 def _merge_server_tree(src_root: Path, dst_root: Path):
-    if not dst_root.exists():
-        dst_root.mkdir(parents=True, exist_ok=True)
     for item in src_root.iterdir():
         dest = dst_root / item.name
+        if item.name == 'resources' and item.is_dir():
+            _merge_resources(item, dest, {'lua-gamemode', 'squirrel-gamemode'})
+            continue
         if item.is_dir():
-            if dest.exists():
-                shutil.rmtree(dest, ignore_errors=True)
-            shutil.copytree(item, dest)
+            shutil.copytree(item, dest, dirs_exist_ok=True)
         else:
-            if dest.exists():
-                dest.unlink()
+            dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(item, dest)
 
 
-def _update_happiness_info(version, zip_url):
-    info = {'version': version, 'zip_url': zip_url}
+def _load_panel_config():
     try:
-        (ROOT_DIR / 'happiness_update.json').write_text(
-            json.dumps(info, indent=4), encoding='utf-8')
+        sys.path.insert(0, str(ROOT_DIR))
+        import storage                                
+        return storage.load_panel_config()
+    except Exception:
+        return {}
+
+
+def _load_server_config():
+    try:
+        sys.path.insert(0, str(ROOT_DIR))
+        import storage                                
+        return storage.load_config()
+    except Exception:
+        return {}
+
+
+def _save_panel_config(cfg: dict):
+    try:
+        sys.path.insert(0, str(ROOT_DIR))
+        import storage                                
+        storage.save_panel_config(cfg)
     except Exception:
         pass
 
 
-def _load_happiness_local_info():
+def _save_server_config(cfg: dict):
     try:
-        p = ROOT_DIR / 'happiness_update.json'
-        if p.exists():
-            return json.loads(p.read_text(encoding='utf-8'))
+        sys.path.insert(0, str(ROOT_DIR))
+        import storage                                
+        storage.save_config(cfg)
     except Exception:
         pass
-    return {}
+
+
+def _parse_settings_xml(path: Path):
+    try:
+        import xml.etree.ElementTree as ET
+        if not path.exists():
+            return None
+        tree = ET.parse(path)
+        root = tree.getroot()
+        data = {}
+        resources = []
+        for child in root:
+            tag = child.tag
+            if tag == 'resource':
+                if child.text:
+                    resources.append(child.text.strip())
+            else:
+                data[tag] = child.text if child.text is not None else ''
+        data['resources'] = resources
+        return data
+    except Exception:
+        return None
+
+
+def _write_settings_xml(path: Path, data: dict):
+    import xml.etree.ElementTree as ET
+    root = ET.Element('settings')
+    simple_fields = ['hostname', 'hostaddress', 'listed', 'port', 'maxplayers',
+                     'episode', 'secret', 'loglevel', 'chat']
+    for field in simple_fields:
+        if field in data:
+            el = ET.SubElement(root, field)
+            val = data[field]
+            if isinstance(val, bool):
+                el.text = 'true' if val else 'false'
+            else:
+                el.text = str(val)
+    for res in data.get('resources', []):
+        el = ET.SubElement(root, 'resource')
+        el.text = str(res).strip()
+    tree = ET.ElementTree(root)
+    ET.indent(tree, space='  ')
+    tree.write(path, encoding='unicode', xml_declaration=True)
 
 
 def _install_connector(server_dir: Path):
-    _log('Downloading latest hpm-connector...')
-    try:
-        req = urllib.request.Request(CONNECTOR_API_URL, headers={'User-Agent': USER_AGENT, 'Accept': 'application/json'})
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-    except Exception as e:
-        raise RuntimeError(f'Failed to fetch connector release info: {e}')
+    _log('Resolving latest hpm-connector release...')
+    req = urllib.request.Request(CONNECTOR_API_URL, headers={'User-Agent': USER_AGENT})
+    with urllib.request.urlopen(req) as resp:
+        data = json.loads(resp.read().decode('utf-8'))
+    zip_url = data.get('zipball_url')
+    tag = data.get('tag_name') or 'latest'
+    if not zip_url:
+        raise RuntimeError('Failed to resolve hpm-connector release zipball')
 
-    assets = data.get('assets', [])
-    zip_asset = None
-    for a in assets:
-        name = a.get('name', '')
-        if name.endswith('.zip'):
-            zip_asset = a
-            break
-    if not zip_asset:
-        raise RuntimeError('No zip asset found in connector release')
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
+        zip_path = tmpdir / f'hpm_connector_{tag}.zip'
+        _download_with_progress(zip_url, zip_path, _status['progress'], min(95, _status['progress'] + 10), f'hpm-connector {tag}')
 
-    zip_url = zip_asset['browser_download_url']
-    tmpdir = Path(tempfile.mkdtemp())
-    zip_path = tmpdir / 'connector.zip'
-    _download_with_progress(zip_url, zip_path, 0, 0, 'hpm-connector')
+        extract_dir = tmpdir / 'connector_extract'
+        extract_dir.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            zf.extractall(extract_dir)
 
-    extract_dir = tmpdir / 'connector_extract'
-    extract_dir.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(zip_path, 'r') as zf:
-        zf.extractall(extract_dir)
+        top_dirs = [p for p in extract_dir.iterdir() if p.is_dir()]
+        source_dir = top_dirs[0] if top_dirs else extract_dir
 
-    resources_dir = server_dir / 'resources'
-    resources_dir.mkdir(exist_ok=True)
+        resources_dir = server_dir / 'resources'
+        target_dir = resources_dir / 'hpm-connector'
+        if target_dir.exists():
+            shutil.rmtree(target_dir, ignore_errors=True)
+        shutil.copytree(source_dir, target_dir, dirs_exist_ok=True)
 
-    connector_dll_name = 'hpm-connector.dll' if IS_WINDOWS else 'hpm-connector.so'
-    connector_dll = _find_file(extract_dir, connector_dll_name)
-    if not connector_dll:
-        raise RuntimeError(f'{connector_dll_name} not found in connector package')
-
-    dest_dll = resources_dir / connector_dll.name
-    if dest_dll.exists():
-        dest_dll.unlink()
-    shutil.copy2(connector_dll, dest_dll)
-    _log(f'Connector installed to {dest_dll}')
-
-    connector_zip_path = resources_dir / 'hpm-connector.zip'
-    if connector_zip_path.exists():
-        connector_zip_path.unlink()
-
-    shutil.rmtree(tmpdir, ignore_errors=True)
+    _log('hpm-connector installed')
 
 
-def _update_happiness(job: dict):
-    _log('Starting HappinessMP update...')
-    _set_status(step='HappinessMP', progress=5)
+def _update_connector_config(server_dir: Path, panel_secret: str, panel_host: str = None):
+    panel_host = panel_host or _get_panel_host()
+    server_lua = server_dir / 'resources' / 'hpm-connector' / 'server.lua'
+    if not server_lua.exists():
+        raise RuntimeError('hpm-connector server.lua not found')
+    text = server_lua.read_text(encoding='utf-8', errors='ignore')
+    text, host_count = re.subn(
+        r'(?m)^local\s+PANEL_HOST\s*=.*$',
+        f'local PANEL_HOST = "{panel_host}"',
+        text
+    )
+    text, secret_count = re.subn(
+        r'(?m)^local\s+PANEL_SECRET\s*=.*$',
+        f'local PANEL_SECRET = "{panel_secret}"',
+        text
+    )
+    if host_count == 0:
+        text = f'local PANEL_HOST = "{panel_host}"\n' + text
+    if secret_count == 0:
+        text = f'local PANEL_SECRET = "{panel_secret}"\n' + text
+    server_lua.write_text(text, encoding='utf-8')
 
-    happiness_info = job.get('happiness_info', {})
-    happiness_version = happiness_info.get('version', '')
-    happiness_zip_url = happiness_info.get('zip_url', '')
 
-    if not happiness_zip_url:
-        raise RuntimeError('No HappinessMP zip_url in update job')
+def _ensure_connector_resource(server_dir: Path):
+    settings_path = server_dir / 'settings.xml'
+    data = _parse_settings_xml(settings_path) or {}
+    resources = data.get('resources', [])
+    if 'hpm-connector' not in resources:
+        resources.append('hpm-connector')
+        data['resources'] = resources
+        _write_settings_xml(settings_path, data)
+        _log('settings.xml updated with hpm-connector')
 
-    start_pct = 10
-    span = 80
-    end_pct = start_pct + span
 
-    with tempfile.TemporaryDirectory() as tmpdir_str:
-        tmpdir = Path(tmpdir_str)
-        zip_path = tmpdir / 'happiness_update.zip'
+def _update_panel_version(version: str):
+    if not version:
+        return
+    cfg = _load_panel_config()
+    cfg['panel_version'] = str(version)
+    _save_panel_config(cfg)
+
+
+def _update_happiness_info(version: str, zip_url: str):
+    if not version:
+        return
+    cfg = _load_server_config()
+    cfg['happiness_version'] = str(version)
+    if zip_url:
+        cfg['happiness_zip_url'] = str(zip_url)
+    _save_server_config(cfg)
+
+
+def perform_panel_update(panel_zip_url: str, panel_version: str, start_pct: int, end_pct: int):
+    _log('Starting panel update')
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
+        zip_path = tmpdir / 'panel.zip'
+        span = max(1, end_pct - start_pct)
+        dl_end = start_pct + int(span * 0.6)
+        extract_end = start_pct + int(span * 0.8)
+        _set_status(step='Panel', progress=start_pct)
+        _download_with_progress(panel_zip_url, zip_path, start_pct, dl_end, 'Panel files')
+
+        extract_dir = tmpdir / 'panel_extract'
+        extract_dir.mkdir(parents=True, exist_ok=True)
+        _log('Extracting panel files...')
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            zf.extractall(extract_dir)
+        _set_status(progress=extract_end)
+
+        top_dirs = [p for p in extract_dir.iterdir() if p.is_dir()]
+        source_dir = top_dirs[0] if top_dirs else extract_dir
+
+        skip_top = {'data', 'HPNMP'}
+        skip_files = {'panel_config.json', 'server_config.json', 'panel_version.json', 'happiness_update.json', 'update_config.json'}
+        skip_any = {'.git', '__pycache__', '.venv', 'venv', 'node_modules'}
+
+        _log('Copying panel files...')
+        _copy_tree(source_dir, ROOT_DIR, skip_top, skip_files, skip_any)
+
+    _update_panel_version(panel_version)
+    _set_status(progress=end_pct)
+    _log('Panel update finished')
+
+
+def perform_happiness_update(happiness_zip_url: str, happiness_version: str, start_pct: int, end_pct: int):
+    _log('Starting HappinessMP update')
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
+        zip_path = tmpdir / 'happiness.zip'
+        span = max(1, end_pct - start_pct)
         dl_end = start_pct + int(span * 0.6)
         extract_end = start_pct + int(span * 0.75)
         _set_status(step='HappinessMP', progress=start_pct)
@@ -246,13 +448,13 @@ def _update_happiness(job: dict):
             zf.extractall(extract_dir)
         _set_status(progress=extract_end)
 
-        server_bin = _find_file(extract_dir, SERVER_BIN_SRC)
+        server_bin = _find_file(extract_dir, 'HappinessMP.Server.out')
         if not server_bin:
-            raise RuntimeError(f'{SERVER_BIN_SRC} not found in extracted server files')
+            raise RuntimeError('HappinessMP.Server.out not found in extracted server files')
 
         server_root = server_bin.parent
         server_cfg = _load_server_config()
-        server_path = server_cfg.get('server_path', f'./HPNMP/{SERVER_BINARY}')
+        server_path = server_cfg.get('server_path', './HPNMP/HappMP')
         server_dir = Path(server_path).resolve().parent
         if not server_dir.exists():
             raise RuntimeError(f'Server directory not found: {server_dir}')
@@ -260,18 +462,17 @@ def _update_happiness(job: dict):
         _log('Updating server files...')
         _merge_server_tree(server_root, server_dir)
 
-        src = server_dir / SERVER_BIN_SRC
-        dst = server_dir / SERVER_BINARY
+        src = server_dir / 'HappinessMP.Server.out'
+        dst = server_dir / 'HappMP'
         if src.exists():
             if dst.exists():
                 dst.unlink()
             src.rename(dst)
         if dst.exists():
-            if not IS_WINDOWS:
-                try:
-                    os.chmod(dst, 0o755)
-                except Exception:
-                    pass
+            try:
+                os.chmod(dst, 0o755)
+            except Exception:
+                pass
 
     _log('Reinstalling hpm-connector...')
     _install_connector(server_dir)
@@ -297,7 +498,7 @@ def _terminate_process(pid: int):
     if not pid:
         return
     try:
-        import psutil
+        import psutil                                
         proc = psutil.Process(pid)
         proc.terminate()
         try:
@@ -307,17 +508,10 @@ def _terminate_process(pid: int):
         return
     except Exception:
         pass
-    if IS_WINDOWS:
-        try:
-            subprocess.run(['taskkill', '/F', '/PID', str(pid)], capture_output=True, timeout=10)
-        except Exception:
-            pass
-    else:
-        try:
-            import signal
-            os.kill(pid, signal.SIGTERM)
-        except Exception:
-            pass
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except Exception:
+        pass
 
 
 def _restart_panel(job: dict):
@@ -325,6 +519,7 @@ def _restart_panel(job: dict):
     server_pid = job.get('server_manager_pid')
     panel_port = _resolve_panel_port(job)
     if restart_mode == 'main':
+                                                              
         restart_flag = DATA_DIR / 'restart.flag'
         restart_flag.write_text('restart', encoding='utf-8')
         _log('Restart flag created, stopping server manager...')
@@ -338,176 +533,69 @@ def _restart_panel(job: dict):
     else:
         cmd = [sys.executable, 'server_manager.py', '--port', str(panel_port)]
     try:
-        popen_kwargs = {'cwd': cwd, 'stdout': subprocess.DEVNULL, 'stderr': subprocess.DEVNULL}
-        if IS_WINDOWS:
-            popen_kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
-        subprocess.Popen(cmd, **popen_kwargs)
+        subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass
     _terminate_process(server_pid)
 
 
-def _update_connector_config(server_dir, panel_secret, panel_host):
-    cfg_path = server_dir / 'hpm-connector.json'
-    if not cfg_path.exists():
-        _log('No existing hpm-connector.json, creating default...')
-        cfg = {}
-    else:
-        try:
-            cfg = json.loads(cfg_path.read_text(encoding='utf-8'))
-        except Exception:
-            cfg = {}
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--job', required=True)
+    args = parser.parse_args()
 
-    cfg.setdefault('api_url', f'http://{panel_host}/connector')
-    cfg['api_url'] = f'http://{panel_host}/connector'
-    cfg.setdefault('api_secret', panel_secret)
-    cfg['api_secret'] = panel_secret
-    cfg.setdefault('heartbeat_interval', 30)
+    job_path = Path(args.job).resolve()
+    job = _json_load(job_path, {})
+    _set_panel_port(_resolve_panel_port(job))
+    targets = job.get('targets') or []
 
-    cfg_path.write_text(json.dumps(cfg, indent=4), encoding='utf-8')
-    _log('Connector config updated')
-
-
-def _ensure_connector_resource(server_dir):
-    resources_cfg = server_dir / 'resources.xml'
-    if not resources_cfg.exists():
-        _log('No resources.xml found, creating default...')
-        resources_cfg.write_text(
-            '<?xml version="1.0" encoding="utf-8"?>\n'
-            '<resources>\n'
-            '    <resource src="hpm-connector.dll" />\n'
-            '</resources>\n',
-            encoding='utf-8'
-        )
-        _log('Created resources.xml with hpm-connector')
-        return
-
-    try:
-        import xml.etree.ElementTree as ET
-        tree = ET.parse(str(resources_cfg))
-        root = tree.getroot()
-        connector_name = 'hpm-connector.dll' if IS_WINDOWS else 'hpm-connector.so'
-        found = any(
-            res.get('src', '').strip() == connector_name
-            for res in root.findall('resource')
-        )
-        if not found:
-            _log('Adding hpm-connector to resources.xml...')
-            res_elem = ET.SubElement(root, 'resource')
-            res_elem.set('src', connector_name)
-            tree.write(str(resources_cfg), encoding='utf-8', xml_declaration=True)
-    except Exception as e:
-        _log(f'Warning: could not update resources.xml: {e}')
-
-
-def _get_panel_host():
-    panel_cfg = _load_panel_config()
-    return panel_cfg.get('panel_host', '127.0.0.1:20000')
-
-
-def _update_panel(job: dict):
-    _log('Starting panel update...')
-    _set_status(step='Panel', progress=2)
-
-    panel_info = job.get('panel_info', {})
-    panel_version = panel_info.get('version', '')
-    panel_zip_url = panel_info.get('zip_url', '')
-
-    if not panel_zip_url:
-        raise RuntimeError('No panel zip_url in update job')
-
-    with tempfile.TemporaryDirectory() as tmpdir_str:
-        tmpdir = Path(tmpdir_str)
-        zip_path = tmpdir / 'panel_update.zip'
-        _set_status(step='Panel', progress=3)
-        _download_with_progress(panel_zip_url, zip_path, 3, 40, 'Panel files')
-
-        extract_dir = tmpdir / 'panel_extract'
-        extract_dir.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(zip_path, 'r') as zf:
-            zf.extractall(extract_dir)
-
-        repo_root = _find_file(extract_dir, 'requirements.txt')
-        if repo_root:
-            src_root = repo_root.parent
-        else:
-            src_root = extract_dir
-
-        _set_status(step='Panel', progress=45)
-        exclude = {'data', 'HPNMP', 'panel_config.json', '__pycache__', '.git', '.venv', 'venv'}
-        for item in src_root.iterdir():
-            if item.name in exclude:
-                continue
-            dest = ROOT_DIR / item.name
-            if item.is_dir():
-                if dest.exists():
-                    shutil.rmtree(dest, ignore_errors=True)
-                shutil.copytree(item, dest)
-            else:
-                if dest.exists():
-                    dest.unlink()
-                shutil.copy2(item, dest)
-
-    _update_panel_version(panel_version)
-    _set_status(step='Panel', progress=80)
-    _log('Panel update finished')
-
-
-def _update_panel_version(version):
-    p = ROOT_DIR / 'panel_version.json'
-    try:
-        p.write_text(json.dumps({'version': version}, indent=4), encoding='utf-8')
-    except Exception:
-        pass
-
-
-def run_update(job: dict):
+    _status.update(STATUS_TEMPLATE)
     _status['running'] = True
     _status['finished'] = False
     _status['success'] = False
-    _status['error'] = ''
-    _status['log'] = []
-    _set_status(progress=0, step='Starting', message='Update started')
+    _status['progress'] = 0
+    _status['step'] = 'Starting'
+    _status['targets'] = targets
+    _json_save(STATUS_FILE, _status)
+    _log('Updater started')
 
     try:
-        targets = job.get('targets', [])
-        for t in targets:
-            if t == 'happiness':
-                _update_happiness(job)
-            elif t == 'panel':
-                _update_panel(job)
+        ranges = {}
+        if 'panel' in targets and 'happiness' in targets:
+            ranges['panel'] = (5, 55)
+            ranges['happiness'] = (55, 95)
+        elif 'panel' in targets:
+            ranges['panel'] = (5, 95)
+        elif 'happiness' in targets:
+            ranges['happiness'] = (5, 95)
 
-        _status['running'] = False
-        _status['finished'] = True
-        _status['success'] = True
-        _set_status(progress=100, step='Done', message='Update completed')
+        if 'panel' in targets:
+            panel = job.get('panel') or {}
+            panel_zip = panel.get('zip_url')
+            panel_ver = panel.get('version')
+            if not panel_zip:
+                raise RuntimeError('Panel update requested but zip_url missing')
+            start_pct, end_pct = ranges.get('panel', (5, 95))
+            perform_panel_update(panel_zip, panel_ver, start_pct, end_pct)
+
+        if 'happiness' in targets:
+            happ = job.get('happiness') or {}
+            happ_zip = happ.get('zip_url')
+            happ_ver = happ.get('version')
+            if not happ_zip:
+                raise RuntimeError('Happiness update requested but zip_url missing')
+            start_pct, end_pct = ranges.get('happiness', (5, 95))
+            perform_happiness_update(happ_zip, happ_ver, start_pct, end_pct)
+
+        _set_status(progress=100, step='Done', finished=True, success=True, running=False)
         _log('Update completed successfully')
-
-        if job.get('restart', True):
-            _log('Restarting panel...')
-            _restart_panel(job)
-
     except Exception as e:
-        _status['running'] = False
-        _status['finished'] = True
-        _status['success'] = False
-        _status['error'] = str(e)
-        _set_status(progress=0, step='Failed', message=str(e))
+        _set_status(finished=True, success=False, running=False, error=str(e))
         _log(f'Update failed: {e}')
+        return
 
-
-def main():
-    parser = argparse.ArgumentParser(description='HMP Panel Updater')
-    parser.add_argument('--job', required=True, help='Path to update job JSON')
-    args = parser.parse_args()
-
-    try:
-        job = json.loads(Path(args.job).read_text(encoding='utf-8'))
-    except Exception as e:
-        _log(f'Failed to load job file: {e}')
-        sys.exit(1)
-
-    run_update(job)
+                   
+    _restart_panel(job)
 
 
 if __name__ == '__main__':
