@@ -16,16 +16,16 @@
         "ghcr.io/parkervcp/yolks:python_3.12": "ghcr.io/parkervcp/yolks:python_3.12"
     },
     "file_denylist": [],
-    "startup": "if [[ -f requirements.txt ]]; then pip install --user -r requirements.txt; fi; python3 main.py --port {{PORT}}",
+    "startup": "pip install -r requirements.txt; python3 main.py --port {{PORT}}",
     "config": {
         "files": "{}",
-        "startup": "{\r\n    \"done\": \"Listening on port {{PORT}}\"\r\n}",
+        "startup": "{\n    \"done\": \"Listening on port {{PORT}}\"\n}",
         "logs": "{}",
         "stop": "^C"
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/bash\r\n# HMP Panel installation\r\napt update\r\napt install -y git curl python3\r\n\r\nmkdir -p /mnt/server\r\ncd /mnt/server\r\n\r\n# Clean directory for fresh clone\r\nrm -rf * .git\r\n\r\necho -e \"Downloading code from GitHub...\"\r\ngit clone https://github.com/zuraxscripts/hmp-panel.git .\r\n\r\necho -e \"Installation completed.\"",
+            "script": "#!/bin/bash\n# HMP Panel installation\napt update\napt install -y git curl python3\n\nmkdir -p /mnt/server\ncd /mnt/server\n\n# Clean directory for fresh clone\nrm -rf * .git\n\ngit clone -b linux https://github.com/zuraxscripts/hmp-panel.git .\n\necho -e \"Installation completed.\"",
             "container": "ghcr.io/parkervcp/installers:debian",
             "entrypoint": "bash"
         }
