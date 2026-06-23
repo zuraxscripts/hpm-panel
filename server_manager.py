@@ -216,7 +216,7 @@ def _resolve_setup_zip_url():
             return url
     except Exception:
         pass
-    return 'https://happinessmp.net/files/HappinessMP%20Server%201.9.3%20Linux.zip'
+    return 'https://happinessmp.net/files/HappinessMP%20Server%202.0%20Linux.zip'
 
 SETUP_SERVER_ZIP_URL = _resolve_setup_zip_url()
 SETUP_CONNECTOR_API_URL = 'https://api.github.com/repos/zuraxscripts/hmp-connector/releases/latest'
