@@ -3024,6 +3024,12 @@ def check_for_updates(force: bool = False):
 
     socketio.emit('update_status', get_update_payload())
 
+    if panel_available and panel_latest:
+        add_console_line(f'[UPDATE] Panel update available: {panel_current} → {panel_latest}')
+    if happiness_available and happiness_latest:
+        local_happiness_ver = happiness_local.get('version') or '?'
+        add_console_line(f'[UPDATE] HappinessMP update available: {local_happiness_ver} → {happiness_latest}')
+
 
 def _load_update_run_state():
     defaults = {
