@@ -2657,8 +2657,12 @@ def ensure_server_files():
     except Exception:
         pass
 
-    resolved_zip_url = str(downloaded_url or SETUP_SERVER_ZIP_URL or '').strip()
-    detected_version = _guess_version_from_url(resolved_zip_url)
+    original_zip_url = str(SETUP_SERVER_ZIP_URL or '').strip()
+    resolved_zip_url = str(downloaded_url or original_zip_url or '').strip()
+    
+    detected_version = _guess_version_from_url(original_zip_url)
+    if not detected_version or _is_unknown_version_value(detected_version):
+        detected_version = _guess_version_from_url(resolved_zip_url)
     if _is_unknown_version_value(detected_version):
         detected_version = ''
     if not detected_version:
@@ -2668,6 +2672,8 @@ def ensure_server_files():
             detected_version = maybe_version
         if not resolved_zip_url:
             resolved_zip_url = str(info.get('zip_url') or '').strip()
+    if not detected_version:
+        detected_version = '2.0'
 
     _persist_local_happiness_info(detected_version, resolved_zip_url or SETUP_SERVER_ZIP_URL)
 
