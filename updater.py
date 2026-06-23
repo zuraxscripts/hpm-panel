@@ -221,7 +221,7 @@ def _update_happiness(job: dict):
     _log('Starting HappinessMP update...')
     _set_status(step='HappinessMP', progress=5)
 
-    happiness_info = job.get('happiness_info', {})
+    happiness_info = job.get('happiness', {})
     happiness_version = happiness_info.get('version', '')
     happiness_zip_url = happiness_info.get('zip_url', '')
 
@@ -409,7 +409,7 @@ def _update_panel(job: dict):
     _log('Starting panel update...')
     _set_status(step='Panel', progress=2)
 
-    panel_info = job.get('panel_info', {})
+    panel_info = job.get('panel', {})
     panel_version = panel_info.get('version', '')
     panel_zip_url = panel_info.get('zip_url', '')
 
