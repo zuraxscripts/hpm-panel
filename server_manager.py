@@ -2888,33 +2888,13 @@ def _load_happiness_local_info():
     if _is_unknown_version_value(version):
         version = ''
 
-    if not version or not zip_url:
-        data = _safe_json_load(HAPPINESS_UPDATE_FILE, {})
-        if isinstance(data, dict):
-            file_version = str(data.get('version') or '').strip()
-            file_zip = str(data.get('zip_url') or '').strip()
-            if not version and not _is_unknown_version_value(file_version):
-                version = file_version
-            if not zip_url:
-                zip_url = file_zip
-
-    if not version:
-        guess = _guess_version_from_url(zip_url or defaults['zip_url'])
-        if guess:
-            version = guess
-
     if not zip_url:
         zip_url = defaults['zip_url']
 
-    if version:
-        _persist_local_happiness_info(version, zip_url)
-    elif zip_url:
-        _persist_local_happiness_info(zip_url=zip_url)
+    if not version:
+        version = defaults['version']
 
-    return {
-        'version': version or defaults['version'],
-        'zip_url': zip_url or defaults['zip_url']
-    }
+    return {'version': version, 'zip_url': zip_url}
 
 
 def _guess_version_from_url(url: str) -> str:
